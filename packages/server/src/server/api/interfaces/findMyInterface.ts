@@ -6,11 +6,11 @@ import { isMinSequoia } from "@server/env";
 import { checkPrivateApiStatus, waitMs } from "@server/helpers/utils";
 import { quitFindMyFriends, startFindMyFriends, showFindMyFriends, hideFindMyFriends } from "../apple/scripts";
 import { FindMyDevice, FindMyItem, FindMyLocationItem } from "@server/api/lib/findmy/types";
-import { transformFindMyItemToDevice } from "@server/api/lib/findmy/utils";
+import { normalizeFindMyLocationItems, transformFindMyItemToDevice } from "@server/api/lib/findmy/utils";
 
 export class FindMyInterface {
     static async getFriends() {
-        return Server().findMyCache.getAll();
+        return normalizeFindMyLocationItems(Server().findMyCache.getAll());
     }
 
     static async getDevices(): Promise<Array<FindMyDevice> | null> {
@@ -76,7 +76,7 @@ export class FindMyInterface {
         if (papiEnabled && isMinSequoia) {
             checkPrivateApiStatus();
             const result = await Server().privateApi.findmy.refreshFriends();
-            const refreshLocations = result?.data?.locations ?? [];
+            const refreshLocations = normalizeFindMyLocationItems(result?.data?.locations ?? []);
             usedPrivateApi = true;
 
             // Save the data to the cache
@@ -91,7 +91,7 @@ export class FindMyInterface {
             this.refreshLocationsAccessibility();
         }
 
-        return Server().findMyCache.getAll();
+        return normalizeFindMyLocationItems(Server().findMyCache.getAll());
     }
 
     static async refreshLocationsAccessibility() {
