@@ -127,7 +127,7 @@ export abstract class DylibPlugin extends Loggable {
 
                 Server().privateApi.on("client-registered", info => {
                     if (info?.process !== this.bundleIdentifier) return;
-                    onSuccessfulStart();
+                    onSuccessfulStart?.();
                 });
 
                 await promise;
