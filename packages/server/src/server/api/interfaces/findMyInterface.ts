@@ -125,6 +125,22 @@ export class FindMyInterface {
         return normalizeFindMyLocationItems(Server().findMyCache.getAll());
     }
 
+    static async debugSearchParty(): Promise<any> {
+        const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
+        if (!papiEnabled || !isMinSequoia) {
+            return {
+                enabled: false,
+                reason: "Find My SearchParty debug route requires the private API on macOS Sequoia or later."
+            };
+        }
+
+        checkPrivateApiStatus();
+        const result = await Server().privateApi.findmy.debugSearchParty();
+        const searchParty = result?.data?.searchparty ?? {};
+        Server().logger.debug(`Find My SearchParty debug diagnostics: ${JSON.stringify(searchParty)}`);
+        return searchParty;
+    }
+
     static async selectFindMyView(view: "Devices" | "Items") {
         const url = view === "Devices" ? "findmy://devices" : "findmy://items";
 

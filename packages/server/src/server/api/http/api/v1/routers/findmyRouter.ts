@@ -63,6 +63,21 @@ export class FindMyRouter {
         }
     }
 
+    static async debugSearchParty(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.debugSearchParty();
+            return new Success(ctx, {
+                message: "Successfully fetched Find My SearchParty diagnostics!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to fetch Find My SearchParty diagnostics!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async devices(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.getDevices();

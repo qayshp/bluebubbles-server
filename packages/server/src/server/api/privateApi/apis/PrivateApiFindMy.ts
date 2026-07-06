@@ -27,4 +27,10 @@ export class PrivateApiFindMy extends PrivateApiAction {
         const request = new TransactionPromise(TransactionType.FIND_MY);
         return this.sendApiMessage(action, null, request, this.process);
     }
+
+    async debugSearchParty(): Promise<TransactionResult> {
+        const action = "debug-findmy-searchparty";
+        const request = new TransactionPromise(TransactionType.FIND_MY);
+        return this.sendApiMessage(action, null, request, this.process);
+    }
 }
