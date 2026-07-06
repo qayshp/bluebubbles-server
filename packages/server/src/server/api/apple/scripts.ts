@@ -139,6 +139,30 @@ export const showFindMyFriends = () => {
     return showApp("FindMy");
 };
 
+const selectFindMyView = (menuItem: "People" | "Devices" | "Items", shortcut: "1" | "2" | "3") => {
+    return `tell application id "com.apple.findmy" to activate
+        delay 1
+        tell application "System Events"
+            tell process "FindMy"
+                set frontmost to true
+                try
+                    click menu item "${menuItem}" of menu "View" of menu bar 1
+                on error
+                    keystroke "${shortcut}" using command down
+                end try
+            end tell
+        end tell
+        delay 2`;
+};
+
+export const showFindMyDevices = () => {
+    return selectFindMyView("Devices", "2");
+};
+
+export const showFindMyItems = () => {
+    return selectFindMyView("Items", "3");
+};
+
 /**
  * The AppleScript used to quit the FindMy app
  */

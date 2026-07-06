@@ -842,11 +842,13 @@ class BlueBubblesServer extends EventEmitter {
 
         this.logger.info("Checking Permissions...");
 
+        const hasAccessibilityAccess = systemPreferences.isTrustedAccessibilityClient(true) === true;
+
         // Log if we dont have accessibility access
-        if (this.hasAccessibilityAccess) {
+        if (hasAccessibilityAccess) {
             this.logger.info("Accessibility permissions are enabled");
         } else {
-            this.logger.debug("Accessibility permissions are required for certain actions!");
+            this.logger.debug("Accessibility permissions are required for certain actions and have been requested!");
         }
 
         // Log if we dont have accessibility access

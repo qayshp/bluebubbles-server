@@ -15,4 +15,16 @@ export class PrivateApiFindMy extends PrivateApiAction {
         const request = new TransactionPromise(TransactionType.FIND_MY);
         return this.sendApiMessage(action, null, request, this.process);
     }
+
+    async refreshDevices(): Promise<TransactionResult> {
+        const action = "refresh-findmy-devices";
+        const request = new TransactionPromise(TransactionType.FIND_MY);
+        return this.sendApiMessage(action, null, request, this.process);
+    }
+
+    async refreshItems(): Promise<TransactionResult> {
+        const action = "refresh-findmy-items";
+        const request = new TransactionPromise(TransactionType.FIND_MY);
+        return this.sendApiMessage(action, null, request, this.process);
+    }
 }

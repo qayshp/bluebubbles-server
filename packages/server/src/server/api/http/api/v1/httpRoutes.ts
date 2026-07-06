@@ -123,6 +123,16 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.GET,
+                        path: "findmy/items",
+                        controller: FindMyRouter.items
+                    },
+                    {
+                        method: HttpMethod.POST,
+                        path: "findmy/items/refresh",
+                        controller: FindMyRouter.refreshItems
+                    },
+                    {
+                        method: HttpMethod.GET,
                         path: "findmy/friends",
                         middleware: [...HttpRoutes.protected, PrivateApiMiddleware],
                         controller: FindMyRouter.friends

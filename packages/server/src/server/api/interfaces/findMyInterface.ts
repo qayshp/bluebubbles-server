@@ -4,7 +4,14 @@ import fs from "fs";
 import { FileSystem } from "@server/fileSystem";
 import { isMinSequoia } from "@server/env";
 import { checkPrivateApiStatus, waitMs } from "@server/helpers/utils";
-import { quitFindMyFriends, startFindMyFriends, showFindMyFriends, hideFindMyFriends } from "../apple/scripts";
+import {
+    quitFindMyFriends,
+    startFindMyFriends,
+    showFindMyDevices,
+    showFindMyFriends,
+    showFindMyItems,
+    hideFindMyFriends
+} from "../apple/scripts";
 import { FindMyDevice, FindMyItem, FindMyLocationItem } from "@server/api/lib/findmy/types";
 import { normalizeFindMyLocationItems, transformFindMyItemToDevice } from "@server/api/lib/findmy/utils";
 
@@ -28,30 +35,7 @@ export class FindMyInterface {
             // Return null if neither of the files exist
             if (devices == null && items == null) return null;
 
-            // Get any items with a group identifier
-            const itemsWithGroup = items.filter(item => item.groupIdentifier);
-            if (itemsWithGroup.length > 0) {
-                try {
-                    const itemGroups = await FindMyInterface.readItemGroups();
-                    if (itemGroups) {
-                        // Create a map of group IDs to group names
-                        const groupMap = itemGroups.reduce((acc, group) => {
-                            acc[group.identifier] = group.name;
-                            return acc;
-                        }, {} as Record<string, string>);
-
-                        // Iterate over the items and add the group name
-                        for (const item of items) {
-                            if (item.groupIdentifier && groupMap[item.groupIdentifier]) {
-                                item.groupName = groupMap[item.groupIdentifier];
-                            }
-                        }
-                    }
-                } catch (ex: any) {
-                    Server().logger.debug('An error occurred while reading FindMy ItemGroups cache file.');
-                    Server().logger.debug(String(ex));
-                }
-            }
+            await FindMyInterface.addItemGroupNames(items ?? []);
 
             // Transform the items to match the same shape as devices
             const transformedItems = (items ?? []).map(transformFindMyItemToDevice);
@@ -64,10 +48,57 @@ export class FindMyInterface {
         }
     }
 
+    static async getItems(): Promise<Array<FindMyItem> | null> {
+        if (isMinSequoia) {
+            Server().logger.debug('Cannot fetch FindMy items on macOS Sequoia or later.');
+            return null;
+        }
+
+        try {
+            const items = await FindMyInterface.readDataFile("Items");
+            if (items == null) return null;
+
+            await FindMyInterface.addItemGroupNames(items);
+            return items;
+        } catch (ex: any) {
+            Server().logger.debug('An error occurred while reading FindMy Item cache file.');
+            Server().logger.debug(String(ex));
+            return null;
+        }
+    }
+
     static async refreshDevices(): Promise<Array<FindMyDevice> | null> {
-        // Can't use the Private API to refresh devices yet
+        const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
+        if (papiEnabled && isMinSequoia) {
+            checkPrivateApiStatus();
+            await this.selectFindMyView("Devices");
+            const result = await Server().privateApi.findmy.refreshDevices();
+            const diagnostics = result?.data?.diagnostics;
+            if (diagnostics) {
+                Server().logger.debug(`Find My device refresh diagnostics: ${JSON.stringify(diagnostics)}`);
+            }
+            return result?.data?.devices ?? [];
+        }
+
         await this.refreshLocationsAccessibility();
         return await this.getDevices();
+    }
+
+    static async refreshItems(): Promise<Array<FindMyItem> | null> {
+        const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
+        if (papiEnabled && isMinSequoia) {
+            checkPrivateApiStatus();
+            await this.selectFindMyView("Items");
+            const result = await Server().privateApi.findmy.refreshItems();
+            const diagnostics = result?.data?.diagnostics;
+            if (diagnostics) {
+                Server().logger.debug(`Find My item refresh diagnostics: ${JSON.stringify(diagnostics)}`);
+            }
+            return result?.data?.items ?? [];
+        }
+
+        await this.refreshLocationsAccessibility();
+        return await this.getItems();
     }
 
     static async refreshFriends(openFindMyApp = true): Promise<FindMyLocationItem[]> {
@@ -92,6 +123,24 @@ export class FindMyInterface {
         }
 
         return normalizeFindMyLocationItems(Server().findMyCache.getAll());
+    }
+
+    static async selectFindMyView(view: "Devices" | "Items") {
+        const url = view === "Devices" ? "findmy://devices" : "findmy://items";
+
+        try {
+            await FileSystem.execShellCommand(`/usr/bin/open '${url}'`);
+            await waitMs(3000);
+            return;
+        } catch (ex: any) {
+            Server().logger.warn(`Unable to select Find My ${view} view by URL! CLI Error: ${ex?.message ?? String(ex)}`);
+        }
+
+        try {
+            await FileSystem.executeAppleScript(view === "Devices" ? showFindMyDevices() : showFindMyItems());
+        } catch (ex: any) {
+            Server().logger.warn(`Unable to select Find My ${view} view! CLI Error: ${ex?.message ?? String(ex)}`);
+        }
     }
 
     static async refreshLocationsAccessibility() {
@@ -133,6 +182,30 @@ export class FindMyInterface {
                 }
             });
         });
+    }
+
+    private static async addItemGroupNames(items: FindMyItem[]) {
+        const itemsWithGroup = items.filter(item => item.groupIdentifier);
+        if (itemsWithGroup.length === 0) return;
+
+        try {
+            const itemGroups = await FindMyInterface.readItemGroups();
+            if (!itemGroups) return;
+
+            const groupMap = itemGroups.reduce((acc, group) => {
+                acc[group.identifier] = group.name;
+                return acc;
+            }, {} as Record<string, string>);
+
+            for (const item of items) {
+                if (item.groupIdentifier && groupMap[item.groupIdentifier]) {
+                    item.groupName = groupMap[item.groupIdentifier];
+                }
+            }
+        } catch (ex: any) {
+            Server().logger.debug('An error occurred while reading FindMy ItemGroups cache file.');
+            Server().logger.debug(String(ex));
+        }
     }
 
     private static readDataFile<T extends "Devices" | "Items">(

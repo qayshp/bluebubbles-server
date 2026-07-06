@@ -32,6 +32,21 @@ export class FindMyRouter {
         }
     }
 
+    static async refreshItems(ctx: RouterContext, _: Next) {
+        try {
+            const locations = await FindMyInterface.refreshItems();
+            return new Success(ctx, {
+                message: "Successfully refreshed Find My item locations!",
+                data: locations
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to refresh Find My item locations!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async refreshFriends(ctx: RouterContext, _: Next) {
         try {
             const locations = await FindMyInterface.refreshFriends();
@@ -55,6 +70,18 @@ export class FindMyRouter {
         } catch (ex: any) {
             throw new ServerError({
                 message: "Failed to fetch Find My device locations!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
+    static async items(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.getItems();
+            return new Success(ctx, { message: "Successfully fetched Find My item locations!", data }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to fetch Find My item locations!",
                 error: ex?.message ?? ex.toString()
             });
         }
