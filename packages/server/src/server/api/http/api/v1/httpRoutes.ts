@@ -146,6 +146,16 @@ export class HttpRoutes {
                         method: HttpMethod.POST,
                         path: "findmy/searchparty/debug",
                         controller: FindMyRouter.debugSearchParty
+                    },
+                    {
+                        method: HttpMethod.POST,
+                        path: "findmy/searchparty/beacons/start",
+                        controller: FindMyRouter.startSearchPartyBeaconProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
+                        path: "findmy/searchparty/beacons",
+                        controller: FindMyRouter.searchPartyBeaconProbe
                     }
                 ]
             },

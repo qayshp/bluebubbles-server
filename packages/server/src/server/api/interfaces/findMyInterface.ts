@@ -141,6 +141,38 @@ export class FindMyInterface {
         return searchParty;
     }
 
+    static async startSearchPartyBeaconProbe(): Promise<any> {
+        const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
+        if (!papiEnabled || !isMinSequoia) {
+            return {
+                enabled: false,
+                reason: "Find My SearchParty beacon probe requires the private API on macOS Sequoia or later."
+            };
+        }
+
+        checkPrivateApiStatus();
+        const result = await Server().privateApi.findmy.startSearchPartyBeaconProbe();
+        const beaconProbe = result?.data?.beacon_probe ?? {};
+        Server().logger.debug(`Find My SearchParty beacon probe start: ${JSON.stringify(beaconProbe)}`);
+        return beaconProbe;
+    }
+
+    static async getSearchPartyBeaconProbe(): Promise<any> {
+        const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
+        if (!papiEnabled || !isMinSequoia) {
+            return {
+                enabled: false,
+                reason: "Find My SearchParty beacon probe requires the private API on macOS Sequoia or later."
+            };
+        }
+
+        checkPrivateApiStatus();
+        const result = await Server().privateApi.findmy.getSearchPartyBeaconProbe();
+        const beaconProbe = result?.data?.beacon_probe ?? {};
+        Server().logger.debug(`Find My SearchParty beacon probe status: ${JSON.stringify(beaconProbe)}`);
+        return beaconProbe;
+    }
+
     static async selectFindMyView(view: "Devices" | "Items") {
         const url = view === "Devices" ? "findmy://devices" : "findmy://items";
 

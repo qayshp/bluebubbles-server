@@ -78,6 +78,36 @@ export class FindMyRouter {
         }
     }
 
+    static async startSearchPartyBeaconProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyBeaconProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty beacon probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty beacon probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
+    static async searchPartyBeaconProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.getSearchPartyBeaconProbe();
+            return new Success(ctx, {
+                message: "Successfully fetched Find My SearchParty beacon probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to fetch Find My SearchParty beacon probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async devices(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.getDevices();
