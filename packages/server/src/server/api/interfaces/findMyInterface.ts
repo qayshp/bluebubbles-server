@@ -302,7 +302,8 @@ export class FindMyInterface {
             "captured-context-detail",
             "owner-last-context",
             "location-fetch-last-context",
-            "beacon-last-online-correlation"
+            "beacon-last-online-correlation",
+            "owner-location-graph"
         ];
         if (!allowedCheckpoints.includes(checkpoint)) {
             return {
