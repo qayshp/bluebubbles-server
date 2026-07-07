@@ -189,6 +189,16 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/resolve-context-uuid",
+                        controller: FindMyRouter.startSearchPartyLocationResolveContextUuidProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/resolve-stable-identifier",
+                        controller: FindMyRouter.startSearchPartyLocationResolveStableIdentifierProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
                         path: "findmy/searchparty/locations",
                         controller: FindMyRouter.searchPartyLocationProbe
                     }

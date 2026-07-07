@@ -224,6 +224,20 @@ export class FindMyInterface {
         );
     }
 
+    static async startSearchPartyLocationResolveContextUuidProbe(): Promise<any> {
+        return await FindMyInterface.startDedicatedSearchPartyLocationProbe(
+            "context UUID identifier resolution",
+            () => Server().privateApi.findmy.startSearchPartyLocationResolveContextUuidProbe()
+        );
+    }
+
+    static async startSearchPartyLocationResolveStableIdentifierProbe(): Promise<any> {
+        return await FindMyInterface.startDedicatedSearchPartyLocationProbe(
+            "stable identifier resolution",
+            () => Server().privateApi.findmy.startSearchPartyLocationResolveStableIdentifierProbe()
+        );
+    }
+
     private static async startDedicatedSearchPartyLocationProbe(label: string, startProbe: () => Promise<any>): Promise<any> {
         const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
         if (!papiEnabled || !isMinSequoia) {

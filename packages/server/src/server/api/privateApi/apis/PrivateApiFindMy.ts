@@ -82,6 +82,18 @@ export class PrivateApiFindMy extends PrivateApiAction {
         return this.sendApiMessage(action, null, request, this.process);
     }
 
+    async startSearchPartyLocationResolveContextUuidProbe(): Promise<TransactionResult> {
+        const action = "debug-findmy-searchparty-locations-resolve-context-uuid";
+        const request = new TransactionPromise(TransactionType.FIND_MY);
+        return this.sendApiMessage(action, null, request, this.process);
+    }
+
+    async startSearchPartyLocationResolveStableIdentifierProbe(): Promise<TransactionResult> {
+        const action = "debug-findmy-searchparty-locations-resolve-stable-identifier";
+        const request = new TransactionPromise(TransactionType.FIND_MY);
+        return this.sendApiMessage(action, null, request, this.process);
+    }
+
     async getSearchPartyLocationProbe(): Promise<TransactionResult> {
         const action = "debug-findmy-searchparty-locations";
         const request = new TransactionPromise(TransactionType.FIND_MY);

@@ -198,6 +198,36 @@ export class FindMyRouter {
         }
     }
 
+    static async startSearchPartyLocationResolveContextUuidProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyLocationResolveContextUuidProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty context UUID identifier resolution probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty context UUID identifier resolution probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
+    static async startSearchPartyLocationResolveStableIdentifierProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyLocationResolveStableIdentifierProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty stable identifier resolution probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty stable identifier resolution probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async searchPartyLocationProbe(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.getSearchPartyLocationProbe();
