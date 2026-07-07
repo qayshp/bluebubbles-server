@@ -259,6 +259,13 @@ export class FindMyInterface {
         );
     }
 
+    static async startSearchPartyLocationCallbackWatchFullContextProbe(): Promise<any> {
+        return await FindMyInterface.startDedicatedSearchPartyLocationProbe(
+            "full context callback watch",
+            () => Server().privateApi.findmy.startSearchPartyLocationCallbackWatchFullContextProbe()
+        );
+    }
+
     private static async startDedicatedSearchPartyLocationProbe(label: string, startProbe: () => Promise<any>): Promise<any> {
         const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
         if (!papiEnabled || !isMinSequoia) {

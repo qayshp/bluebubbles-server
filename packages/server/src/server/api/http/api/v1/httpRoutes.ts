@@ -214,6 +214,11 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/callback-watch-full-context",
+                        controller: FindMyRouter.startSearchPartyLocationCallbackWatchFullContextProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
                         path: "findmy/searchparty/locations/compact",
                         controller: FindMyRouter.searchPartyLocationProbeCompact
                     },
