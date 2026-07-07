@@ -173,6 +173,38 @@ export class FindMyInterface {
         return beaconProbe;
     }
 
+    static async startSearchPartyLocationProbe(): Promise<any> {
+        const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
+        if (!papiEnabled || !isMinSequoia) {
+            return {
+                enabled: false,
+                reason: "Find My SearchParty location probe requires the private API on macOS Sequoia or later."
+            };
+        }
+
+        checkPrivateApiStatus();
+        const result = await Server().privateApi.findmy.startSearchPartyLocationProbe();
+        const locationProbe = result?.data?.location_probe ?? {};
+        Server().logger.debug(`Find My SearchParty location probe start: ${JSON.stringify(locationProbe)}`);
+        return locationProbe;
+    }
+
+    static async getSearchPartyLocationProbe(): Promise<any> {
+        const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
+        if (!papiEnabled || !isMinSequoia) {
+            return {
+                enabled: false,
+                reason: "Find My SearchParty location probe requires the private API on macOS Sequoia or later."
+            };
+        }
+
+        checkPrivateApiStatus();
+        const result = await Server().privateApi.findmy.getSearchPartyLocationProbe();
+        const locationProbe = result?.data?.location_probe ?? {};
+        Server().logger.debug(`Find My SearchParty location probe status: ${JSON.stringify(locationProbe)}`);
+        return locationProbe;
+    }
+
     static async selectFindMyView(view: "Devices" | "Items") {
         const url = view === "Devices" ? "findmy://devices" : "findmy://items";
 

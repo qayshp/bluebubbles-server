@@ -108,6 +108,36 @@ export class FindMyRouter {
         }
     }
 
+    static async startSearchPartyLocationProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyLocationProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty location probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty location probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
+    static async searchPartyLocationProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.getSearchPartyLocationProbe();
+            return new Success(ctx, {
+                message: "Successfully fetched Find My SearchParty location probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to fetch Find My SearchParty location probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async devices(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.getDevices();
