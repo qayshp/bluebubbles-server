@@ -258,6 +258,21 @@ export class FindMyRouter {
         }
     }
 
+    static async startSearchPartyLocationCallbackWatchProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyLocationCallbackWatchProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty callback watch probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty callback watch probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async searchPartyLocationProbe(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.getSearchPartyLocationProbe();
