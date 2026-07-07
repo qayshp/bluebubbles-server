@@ -297,7 +297,11 @@ export class FindMyInterface {
             "responds-proxy",
             "signature-owner",
             "signature-location-fetch",
-            "signature-proxy"
+            "signature-proxy",
+            "captured-context",
+            "captured-context-detail",
+            "owner-last-context",
+            "location-fetch-last-context"
         ];
         if (!allowedCheckpoints.includes(checkpoint)) {
             return {
