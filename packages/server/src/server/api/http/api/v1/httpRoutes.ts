@@ -229,6 +229,11 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/delegated-watch",
+                        controller: FindMyRouter.startSearchPartyLocationDelegatedWatchProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
                         path: "findmy/searchparty/locations/compact",
                         controller: FindMyRouter.searchPartyLocationProbeCompact
                     },
