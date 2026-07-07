@@ -266,6 +266,13 @@ export class FindMyInterface {
         );
     }
 
+    static async startSearchPartyLocationDeviceEventWatchProbe(): Promise<any> {
+        return await FindMyInterface.startDedicatedSearchPartyLocationProbe(
+            "device event watch",
+            () => Server().privateApi.findmy.startSearchPartyLocationDeviceEventWatchProbe()
+        );
+    }
+
     private static async startDedicatedSearchPartyLocationProbe(label: string, startProbe: () => Promise<any>): Promise<any> {
         const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
         if (!papiEnabled || !isMinSequoia) {

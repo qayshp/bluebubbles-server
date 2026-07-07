@@ -288,6 +288,21 @@ export class FindMyRouter {
         }
     }
 
+    static async startSearchPartyLocationDeviceEventWatchProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyLocationDeviceEventWatchProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty device event watch probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty device event watch probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async searchPartyLocationProbe(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.getSearchPartyLocationProbe();

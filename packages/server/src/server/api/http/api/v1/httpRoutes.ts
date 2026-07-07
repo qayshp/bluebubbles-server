@@ -219,6 +219,11 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/device-event-watch",
+                        controller: FindMyRouter.startSearchPartyLocationDeviceEventWatchProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
                         path: "findmy/searchparty/locations/compact",
                         controller: FindMyRouter.searchPartyLocationProbeCompact
                     },
