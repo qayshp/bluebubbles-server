@@ -252,6 +252,13 @@ export class FindMyInterface {
         );
     }
 
+    static async startSearchPartyLocationLastOnlineIdentifiersProbe(): Promise<any> {
+        return await FindMyInterface.startDedicatedSearchPartyLocationProbe(
+            "last-online identifiers context",
+            () => Server().privateApi.findmy.startSearchPartyLocationLastOnlineIdentifiersProbe()
+        );
+    }
+
     static async startSearchPartyLocationCallbackWatchProbe(): Promise<any> {
         return await FindMyInterface.startDedicatedSearchPartyLocationProbe(
             "callback watch",

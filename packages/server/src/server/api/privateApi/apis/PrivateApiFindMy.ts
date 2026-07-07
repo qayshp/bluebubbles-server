@@ -106,6 +106,12 @@ export class PrivateApiFindMy extends PrivateApiAction {
         return this.sendApiMessage(action, null, request, this.process);
     }
 
+    async startSearchPartyLocationLastOnlineIdentifiersProbe(): Promise<TransactionResult> {
+        const action = "debug-findmy-searchparty-locations-last-online-identifiers";
+        const request = new TransactionPromise(TransactionType.FIND_MY);
+        return this.sendApiMessage(action, null, request, this.process);
+    }
+
     async startSearchPartyLocationCallbackWatchProbe(): Promise<TransactionResult> {
         const action = "debug-findmy-searchparty-locations-callback-watch";
         const request = new TransactionPromise(TransactionType.FIND_MY);

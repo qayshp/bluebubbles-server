@@ -209,6 +209,11 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/last-online-identifiers",
+                        controller: FindMyRouter.startSearchPartyLocationLastOnlineIdentifiersProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
                         path: "findmy/searchparty/locations/callback-watch",
                         controller: FindMyRouter.startSearchPartyLocationCallbackWatchProbe
                     },

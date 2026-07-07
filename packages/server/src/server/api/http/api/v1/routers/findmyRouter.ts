@@ -258,6 +258,21 @@ export class FindMyRouter {
         }
     }
 
+    static async startSearchPartyLocationLastOnlineIdentifiersProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyLocationLastOnlineIdentifiersProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty last-online identifiers probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty last-online identifiers probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async startSearchPartyLocationCallbackWatchProbe(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.startSearchPartyLocationCallbackWatchProbe();
