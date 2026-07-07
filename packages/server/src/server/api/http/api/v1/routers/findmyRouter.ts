@@ -228,6 +228,21 @@ export class FindMyRouter {
         }
     }
 
+    static async startSearchPartyLocationResolvedBeaconLocationProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyLocationResolvedBeaconLocationProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty resolved beacon location probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty resolved beacon location probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async searchPartyLocationProbe(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.getSearchPartyLocationProbe();

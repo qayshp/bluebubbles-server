@@ -238,6 +238,13 @@ export class FindMyInterface {
         );
     }
 
+    static async startSearchPartyLocationResolvedBeaconLocationProbe(): Promise<any> {
+        return await FindMyInterface.startDedicatedSearchPartyLocationProbe(
+            "resolved beacon location",
+            () => Server().privateApi.findmy.startSearchPartyLocationResolvedBeaconLocationProbe()
+        );
+    }
+
     private static async startDedicatedSearchPartyLocationProbe(label: string, startProbe: () => Promise<any>): Promise<any> {
         const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
         if (!papiEnabled || !isMinSequoia) {

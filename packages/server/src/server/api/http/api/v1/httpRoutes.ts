@@ -199,6 +199,11 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/resolved-beacon-location",
+                        controller: FindMyRouter.startSearchPartyLocationResolvedBeaconLocationProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
                         path: "findmy/searchparty/locations",
                         controller: FindMyRouter.searchPartyLocationProbe
                     }
