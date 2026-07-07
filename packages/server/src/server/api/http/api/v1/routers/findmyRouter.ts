@@ -303,6 +303,21 @@ export class FindMyRouter {
         }
     }
 
+    static async startSearchPartyLocationDelegatedContextProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyLocationDelegatedContextProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty delegated context probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty delegated context probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async searchPartyLocationProbe(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.getSearchPartyLocationProbe();

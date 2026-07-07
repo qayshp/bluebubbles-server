@@ -224,6 +224,11 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/delegated-context",
+                        controller: FindMyRouter.startSearchPartyLocationDelegatedContextProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
                         path: "findmy/searchparty/locations/compact",
                         controller: FindMyRouter.searchPartyLocationProbeCompact
                     },
