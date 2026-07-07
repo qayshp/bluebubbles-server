@@ -287,6 +287,31 @@ export class FindMyInterface {
         );
     }
 
+    static async startSearchPartyLocationDelegatedCheckpointProbe(checkpoint: string): Promise<any> {
+        const allowedCheckpoints = [
+            "session",
+            "location-fetch",
+            "proxy",
+            "responds-owner",
+            "responds-location-fetch",
+            "responds-proxy",
+            "signature-owner",
+            "signature-location-fetch",
+            "signature-proxy"
+        ];
+        if (!allowedCheckpoints.includes(checkpoint)) {
+            return {
+                enabled: false,
+                reason: `Unknown delegated checkpoint: ${checkpoint}`
+            };
+        }
+
+        return await FindMyInterface.startDedicatedSearchPartyLocationProbe(
+            `delegated checkpoint ${checkpoint}`,
+            () => Server().privateApi.findmy.startSearchPartyLocationDelegatedCheckpointProbe(checkpoint)
+        );
+    }
+
     private static async startDedicatedSearchPartyLocationProbe(label: string, startProbe: () => Promise<any>): Promise<any> {
         const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
         if (!papiEnabled || !isMinSequoia) {

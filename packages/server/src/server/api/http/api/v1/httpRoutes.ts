@@ -234,6 +234,11 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/delegated-checkpoint/:checkpoint",
+                        controller: FindMyRouter.startSearchPartyLocationDelegatedCheckpointProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
                         path: "findmy/searchparty/locations/compact",
                         controller: FindMyRouter.searchPartyLocationProbeCompact
                     },
