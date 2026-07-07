@@ -204,6 +204,11 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/context-single-identifier",
+                        controller: FindMyRouter.startSearchPartyLocationContextSingleIdentifierProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
                         path: "findmy/searchparty/locations",
                         controller: FindMyRouter.searchPartyLocationProbe
                     }

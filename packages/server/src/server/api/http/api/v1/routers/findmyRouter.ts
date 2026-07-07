@@ -243,6 +243,21 @@ export class FindMyRouter {
         }
     }
 
+    static async startSearchPartyLocationContextSingleIdentifierProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyLocationContextSingleIdentifierProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty single identifier context probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty single identifier context probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async searchPartyLocationProbe(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.getSearchPartyLocationProbe();

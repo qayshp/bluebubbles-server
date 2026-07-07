@@ -100,6 +100,12 @@ export class PrivateApiFindMy extends PrivateApiAction {
         return this.sendApiMessage(action, null, request, this.process);
     }
 
+    async startSearchPartyLocationContextSingleIdentifierProbe(): Promise<TransactionResult> {
+        const action = "debug-findmy-searchparty-locations-context-single-identifier";
+        const request = new TransactionPromise(TransactionType.FIND_MY);
+        return this.sendApiMessage(action, null, request, this.process);
+    }
+
     async getSearchPartyLocationProbe(): Promise<TransactionResult> {
         const action = "debug-findmy-searchparty-locations";
         const request = new TransactionPromise(TransactionType.FIND_MY);
