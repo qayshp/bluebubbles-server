@@ -123,6 +123,51 @@ export class FindMyRouter {
         }
     }
 
+    static async startSearchPartyLocationLatestSingleProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyLocationLatestSingleProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty latest single location probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty latest single location probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
+    static async startSearchPartyLocationSourceSubsetProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyLocationSourceSubsetProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty source subset location probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty source subset location probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
+    static async startSearchPartyLocationProxyContextProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyLocationProxyContextProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty proxy context location probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty proxy context location probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async searchPartyLocationProbe(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.getSearchPartyLocationProbe();

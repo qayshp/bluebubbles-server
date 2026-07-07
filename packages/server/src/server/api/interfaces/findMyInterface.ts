@@ -189,6 +189,43 @@ export class FindMyInterface {
         return locationProbe;
     }
 
+    static async startSearchPartyLocationLatestSingleProbe(): Promise<any> {
+        return await FindMyInterface.startDedicatedSearchPartyLocationProbe(
+            "latest single identifier",
+            () => Server().privateApi.findmy.startSearchPartyLocationLatestSingleProbe()
+        );
+    }
+
+    static async startSearchPartyLocationSourceSubsetProbe(): Promise<any> {
+        return await FindMyInterface.startDedicatedSearchPartyLocationProbe(
+            "source subset",
+            () => Server().privateApi.findmy.startSearchPartyLocationSourceSubsetProbe()
+        );
+    }
+
+    static async startSearchPartyLocationProxyContextProbe(): Promise<any> {
+        return await FindMyInterface.startDedicatedSearchPartyLocationProbe(
+            "proxy context",
+            () => Server().privateApi.findmy.startSearchPartyLocationProxyContextProbe()
+        );
+    }
+
+    private static async startDedicatedSearchPartyLocationProbe(label: string, startProbe: () => Promise<any>): Promise<any> {
+        const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
+        if (!papiEnabled || !isMinSequoia) {
+            return {
+                enabled: false,
+                reason: "Find My SearchParty location probe requires the private API on macOS Sequoia or later."
+            };
+        }
+
+        checkPrivateApiStatus();
+        const result = await startProbe();
+        const locationProbe = result?.data?.location_probe ?? {};
+        Server().logger.debug(`Find My SearchParty ${label} location probe start: ${JSON.stringify(locationProbe)}`);
+        return locationProbe;
+    }
+
     static async getSearchPartyLocationProbe(): Promise<any> {
         const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
         if (!papiEnabled || !isMinSequoia) {

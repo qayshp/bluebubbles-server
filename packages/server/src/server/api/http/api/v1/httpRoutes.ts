@@ -164,6 +164,21 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/latest-single",
+                        controller: FindMyRouter.startSearchPartyLocationLatestSingleProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/source-subset",
+                        controller: FindMyRouter.startSearchPartyLocationSourceSubsetProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/proxy-context",
+                        controller: FindMyRouter.startSearchPartyLocationProxyContextProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
                         path: "findmy/searchparty/locations",
                         controller: FindMyRouter.searchPartyLocationProbe
                     }
