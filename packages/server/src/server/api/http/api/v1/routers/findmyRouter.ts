@@ -288,6 +288,21 @@ export class FindMyRouter {
         }
     }
 
+    static async searchPartyLocationProbeCompact(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.getSearchPartyLocationProbeCompact();
+            return new Success(ctx, {
+                message: "Successfully fetched compact Find My SearchParty location probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to fetch compact Find My SearchParty location probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async devices(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.getDevices();

@@ -291,6 +291,22 @@ export class FindMyInterface {
         return locationProbe;
     }
 
+    static async getSearchPartyLocationProbeCompact(): Promise<any> {
+        const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
+        if (!papiEnabled || !isMinSequoia) {
+            return {
+                enabled: false,
+                reason: "Find My SearchParty location probe requires the private API on macOS Sequoia or later."
+            };
+        }
+
+        checkPrivateApiStatus();
+        const result = await Server().privateApi.findmy.getSearchPartyLocationProbeCompact();
+        const locationProbe = result?.data?.location_probe ?? {};
+        Server().logger.debug(`Find My SearchParty compact location probe status: ${JSON.stringify(locationProbe)}`);
+        return locationProbe;
+    }
+
     static async selectFindMyView(view: "Devices" | "Items") {
         const url = view === "Devices" ? "findmy://devices" : "findmy://items";
 
