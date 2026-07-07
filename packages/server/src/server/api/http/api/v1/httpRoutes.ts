@@ -184,6 +184,11 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.POST,
+                        path: "findmy/searchparty/locations/resolve-identifiers",
+                        controller: FindMyRouter.startSearchPartyLocationResolveIdentifiersProbe
+                    },
+                    {
+                        method: HttpMethod.POST,
                         path: "findmy/searchparty/locations",
                         controller: FindMyRouter.searchPartyLocationProbe
                     }
