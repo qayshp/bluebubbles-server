@@ -168,6 +168,21 @@ export class FindMyRouter {
         }
     }
 
+    static async startSearchPartyLocationLiveRequestProbe(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.startSearchPartyLocationLiveRequestProbe();
+            return new Success(ctx, {
+                message: "Successfully started Find My SearchParty live request location probe!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to start Find My SearchParty live request location probe!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async searchPartyLocationProbe(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.getSearchPartyLocationProbe();
