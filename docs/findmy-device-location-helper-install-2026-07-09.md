@@ -152,3 +152,16 @@ The metadata-only route still crashed Find My:
 - A 30 second curl call returned HTTP `000` with no response body.
 
 This rules out raw Swift device values crossing into Objective-C as the only crash source. The next narrower installed helper should call `FMIPManager.devices` and return only `devices.count`, with no element type mapping, descriptions, Mirror summaries, or Objective-C device serialization.
+
+## Count-only helper install
+
+Installed the next narrower helper. It reports `snapshot_mode: count_only` from the FMIP device snapshot and intentionally leaves element metadata empty.
+
+The installed helper md5 for this count-only attempt is:
+
+- `8e6989e266ef88d3d4c9c74e0445bdca`
+
+Interpretation:
+
+- If this route returns, then `FMIPManager.devices` can be called safely and the crash is in element inspection.
+- If this route still crashes, then either the `FMIPManager.devices` accessor itself is unsafe with our current Swift declaration/timing, or the manager needs to be observed through a different callback/provider path.
