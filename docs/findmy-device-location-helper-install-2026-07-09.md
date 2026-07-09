@@ -286,3 +286,20 @@ debug-findmy-devices-provider-runtime
 ```
 
 The helper selects the Devices view and returns SiriFindMy/FMIP provider runtime diagnostics plus object graph/session summaries. It does not install FMIPCore callback swizzles and does not call `FMIPManager.devices`.
+
+## Provider runtime first route result
+
+The first provider-runtime route call returned successfully:
+
+- HTTP 200.
+- Find My did not crash.
+- `selected_devices_segment` was `true`.
+- `active_devices_list.visible_cell_count` was `13`.
+
+However, the response was over-compacted and omitted the intended `runtime`, `object_graph`, `session_objects`, and `probe_mode` fields. The helper was updated to return full diagnostics for this route.
+
+Updated installed helper checksum:
+
+```text
+2e14aefbe35c29b9248ba44d84e839d7
+```
