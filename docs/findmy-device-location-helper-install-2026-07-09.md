@@ -250,3 +250,17 @@ selector contains didReceiveDevices
 ```
 
 It still avoids direct `FMIPManager.devices` reads.
+
+## Scoped FMIPManager didReceiveDevices route result
+
+The scoped `FMIPManager.didReceiveDevices` route also crashed Find My:
+
+- Request started at `2026-07-09 09:25:32`.
+- The Find My helper socket ended at `2026-07-09 09:25:35`.
+- BlueBubbles marked Find My as force quit and relaunched it.
+- A 45 second curl call returned HTTP `000` with no response body.
+
+Interpretation:
+
+- Generic callback swizzling is likely the wrong shape for FMIPCore Swift methods.
+- The next step should avoid FMIPCore callback swizzling and inspect the SiriFindMy provider layer, especially `FMIPSyncDeviceProvider`, `devicesPublisher`, and retained provider/session objects.
