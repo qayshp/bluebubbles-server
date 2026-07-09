@@ -329,3 +329,48 @@ Bounded provider helper checksum:
 ```text
 a1d91cb41afd1c39d945bd7cf5292783
 ```
+
+## Bounded provider runtime route result
+
+The bounded provider-runtime route returned successfully:
+
+- HTTP 200.
+- Response size: 10,495 bytes.
+- Request duration: 10.6 seconds.
+- No Find My crash after the route.
+- `probe_mode`: `provider_runtime_no_fmip_callback_swizzle`
+- `selected_devices_segment`: `true`
+- Active Devices data source: `FindMy.FMDevicesListDataSource`
+- Visible device cells: 13
+
+Runtime availability:
+
+- Available:
+  - `FMIPCore.FMIPManager`
+  - `_TtC8FMIPCore11FMIPManager`
+  - `FMIPCore.FMIPDataManager`
+  - `_TtC8FMIPCore15FMIPDataManager`
+- Not available:
+  - SiriFindMy `FMIPCoreFindDeviceSession`
+  - SiriFindMy `FMIPSyncDeviceProvider`
+  - SiriFindMy `FMIPManagerWrapperImpl`
+  - SiriFindMy `FindDeviceIntentHandler`
+
+Useful `FMIPDataManager` ivars exposed by runtime metadata:
+
+- `devices`
+- `owner`
+- `familyMembers`
+- `crowdSourcedOriginalLocations`
+- `crowdSourcedLocations`
+- `crowdSourcedLocating`
+- `deviceConnectedStates`
+- `safeLocations`
+- `safeLocationsMapping`
+
+Next target:
+
+- Capture or retrieve the retained `FMIPManager` instance.
+- Follow its `dataManager` ivar.
+- Inspect `FMIPDataManager` ivars directly with bounded summaries, starting with `devices`, `crowdSourcedLocations`, and `deviceConnectedStates`.
+- Continue avoiding `FMIPManager.devices`, which crashed even when accessed only for `.count`.
