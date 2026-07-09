@@ -202,3 +202,19 @@ Interpretation:
 - If the route returns with `fmip_callbacks.callback_count > 0`, inspect callback arguments for location-bearing objects.
 - If the route returns with no callbacks, move to a SiriFindMy provider-specific probe.
 - If the route crashes, reduce the watcher to one selector/class family at a time.
+
+## Scoped FMIPDataManager callback helper install
+
+Installed helper checksum:
+
+```text
+6a41ab32b563ed1b91b455f4fb912def
+```
+
+This build narrows the same debug route so it no longer installs the broad FMIP/SiriFindMy callback watcher. The helper now watches only the `FMIPDataManager` class family for selectors containing `updateDevicesLocations`.
+
+Reason:
+
+- The broad callback watcher caused Find My to be force-quit during the first route call.
+- The narrow route keeps the `FMIPManager.devices` direct accessor off-limits and tests the most direct update method first.
+- Normal Find My swizzles no longer install the broad FMIP callback watcher by default.
