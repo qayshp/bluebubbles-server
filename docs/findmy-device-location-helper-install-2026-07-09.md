@@ -303,3 +303,29 @@ Updated installed helper checksum:
 ```text
 2e14aefbe35c29b9248ba44d84e839d7
 ```
+
+## Provider runtime full diagnostics result
+
+The full-diagnostics provider route sent a payload, but the server could not decode it:
+
+- Request started at `2026-07-09 09:34:43`.
+- The helper sent a large JSON payload.
+- The server logged `Failed to decode BlueBubblesHelper data!`.
+- The JSON appeared split around 64 KB boundaries, causing parse errors such as `Unterminated string in JSON`.
+- The HTTP request timed out with HTTP `000` because the transaction response never decoded.
+
+Useful details visible before truncation:
+
+- `SiriFindMy.FMIPCoreFindDeviceSession`: not available.
+- `SiriFindMy.FMIPSyncDeviceProvider`: not available.
+- `SiriFindMy.FMIPManagerWrapperImpl`: not available.
+- `FMIPCore.FMIPManager`: available, with ivars such as `ownerSession`, `dataManager`, `locationController`, `refreshingController`, `snapshotDevicesResponseReceived`, and `isUpdatingSingleDevices`.
+- `FMIPCore.FMIPDataManager`: available, with ivars such as `devices`, `crowdSourcedOriginalLocations`, `crowdSourcedLocations`, `deviceConnectedStates`, `safeLocations`, `safeLocationsMapping`, `items`, and `itemGroups`.
+
+The helper was updated again to keep runtime details but bound object/session/passive diagnostics to summaries.
+
+Bounded provider helper checksum:
+
+```text
+a1d91cb41afd1c39d945bd7cf5292783
+```
