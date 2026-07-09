@@ -141,3 +141,14 @@ The installed helper md5 for this metadata-only attempt is:
 - `fd4ee5b187c13a7eb00640b46f959cb2`
 
 If the delayed route survives and returns a non-zero count, the next extraction should remain Swift-side and add individual fields one at a time. If it still crashes, the next target is either the `FMIPManager.devices` accessor itself or the manager initialization/timing rather than the Objective-C serializer.
+
+## Metadata-only route result
+
+The metadata-only route still crashed Find My:
+
+- Request started at `2026-07-09 02:06:19`.
+- The Find My helper socket ended at `2026-07-09 02:06:22`.
+- BlueBubbles marked the Find My process as force quit and relaunched it.
+- A 30 second curl call returned HTTP `000` with no response body.
+
+This rules out raw Swift device values crossing into Objective-C as the only crash source. The next narrower installed helper should call `FMIPManager.devices` and return only `devices.count`, with no element type mapping, descriptions, Mirror summaries, or Objective-C device serialization.
