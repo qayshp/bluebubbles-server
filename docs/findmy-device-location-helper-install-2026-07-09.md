@@ -218,3 +218,18 @@ Reason:
 - The broad callback watcher caused Find My to be force-quit during the first route call.
 - The narrow route keeps the `FMIPManager.devices` direct accessor off-limits and tests the most direct update method first.
 - Normal Find My swizzles no longer install the broad FMIP callback watcher by default.
+
+## Scoped FMIPDataManager route result
+
+The scoped `FMIPDataManager.updateDevicesLocations` route still crashed Find My:
+
+- Request started at `2026-07-09 09:22:08`.
+- The Find My helper socket ended at `2026-07-09 09:22:12`.
+- BlueBubbles marked Find My as force quit and relaunched it.
+- A 45 second curl call returned HTTP `000` with no response body.
+
+Interpretation:
+
+- The generic object-argument trampoline is not safe for this method family.
+- `updateDevicesLocations` remains semantically interesting, but this swizzle shape should not be used again without a method-specific signature.
+- The next runtime step is to test `FMIPManager.didReceiveDevices`, then switch to SiriFindMy provider inspection if that also fails.
