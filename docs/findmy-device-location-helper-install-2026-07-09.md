@@ -165,3 +165,14 @@ Interpretation:
 
 - If this route returns, then `FMIPManager.devices` can be called safely and the crash is in element inspection.
 - If this route still crashes, then either the `FMIPManager.devices` accessor itself is unsafe with our current Swift declaration/timing, or the manager needs to be observed through a different callback/provider path.
+
+## Count-only route result
+
+The count-only helper still crashed Find My:
+
+- Request started at `2026-07-09 02:10:26`.
+- The Find My helper socket ended at `2026-07-09 02:10:29`.
+- BlueBubbles marked Find My as force quit and relaunched it.
+- A 30 second curl call returned HTTP `000` with no response body.
+
+This means even evaluating `FMIPManager.devices.count` through the current handwritten Swift bridge is unsafe after refresh. The next server-facing work should wait until the helper finds a safer FMIPCore access path, most likely by inspecting the private framework metadata for the true accessor ABI or by hooking callback/update methods instead of pulling the property.
