@@ -233,3 +233,20 @@ Interpretation:
 - The generic object-argument trampoline is not safe for this method family.
 - `updateDevicesLocations` remains semantically interesting, but this swizzle shape should not be used again without a method-specific signature.
 - The next runtime step is to test `FMIPManager.didReceiveDevices`, then switch to SiriFindMy provider inspection if that also fails.
+
+## Scoped FMIPManager didReceiveDevices helper install
+
+Installed helper checksum:
+
+```text
+ad90e7d2cd4fed4c56edbc1d692781c1
+```
+
+This build moves the same debug route to the second FMIPCore callback lead:
+
+```text
+FMIPCore.FMIPManager / _TtC8FMIPCore11FMIPManager / FMIPManager
+selector contains didReceiveDevices
+```
+
+It still avoids direct `FMIPManager.devices` reads.
