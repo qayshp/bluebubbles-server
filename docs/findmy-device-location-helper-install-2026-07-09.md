@@ -115,3 +115,29 @@ The helper serializer was hardened to catch exceptions per FMIP device and repor
 The updated installed helper md5 after this hardening is:
 
 - `d340b14c62f6d0cb4ea6790bff4e92de`
+
+## Hardened route result
+
+A clean call to `POST /api/v1/icloud/findmy/devices/debug/delayed` with the hardened helper still timed out with no response. The server log showed:
+
+- Request started at `2026-07-09 02:00:35`.
+- The Find My helper socket ended at `2026-07-09 02:00:38`.
+- BlueBubbles marked the Find My process as force quit and relaunched it.
+- The API transaction timed out after about 123 seconds.
+
+That means the Objective-C per-device exception handling did not get a chance to report a bad field. The crash is likely at the Swift bridge snapshot boundary, before normal Objective-C serialization.
+
+## Metadata-only helper install
+
+The next installed helper changes the FMIP device bridge to avoid returning raw Swift `FMIPDevice` values through Objective-C. It now returns only Swift-side metadata from the delayed route:
+
+- `device_count`
+- `device_classes`
+- first 10 `device_summaries`
+- Mirror child labels for those summaries
+
+The installed helper md5 for this metadata-only attempt is:
+
+- `fd4ee5b187c13a7eb00640b46f959cb2`
+
+If the delayed route survives and returns a non-zero count, the next extraction should remain Swift-side and add individual fields one at a time. If it still crashes, the next target is either the `FMIPManager.devices` accessor itself or the manager initialization/timing rather than the Objective-C serializer.
