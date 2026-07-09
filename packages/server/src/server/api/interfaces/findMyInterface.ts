@@ -122,6 +122,25 @@ export class FindMyInterface {
         return result?.data ?? {};
     }
 
+    static async debugDevicesProviderRuntime(): Promise<any> {
+        const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
+        if (!papiEnabled || !isMinSequoia) {
+            return {
+                enabled: false,
+                reason: "Find My provider runtime diagnostics require the private API on macOS Sequoia or later."
+            };
+        }
+
+        checkPrivateApiStatus();
+        await this.selectFindMyView("Devices");
+        const result = await Server().privateApi.findmy.debugDevicesProviderRuntime();
+        const diagnostics = result?.data?.diagnostics;
+        if (diagnostics) {
+            Server().logger.debug(`Find My provider runtime diagnostics: ${JSON.stringify(diagnostics)}`);
+        }
+        return result?.data ?? {};
+    }
+
     static async refreshItems(): Promise<Array<FindMyItem> | null> {
         const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
         if (papiEnabled && isMinSequoia) {

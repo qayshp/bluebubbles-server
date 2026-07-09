@@ -62,6 +62,21 @@ export class FindMyRouter {
         }
     }
 
+    static async debugDevicesProviderRuntime(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.debugDevicesProviderRuntime();
+            return new Success(ctx, {
+                message: "Successfully fetched Find My provider runtime diagnostics!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to fetch Find My provider runtime diagnostics!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async refreshItems(ctx: RouterContext, _: Next) {
         try {
             const locations = await FindMyInterface.refreshItems();

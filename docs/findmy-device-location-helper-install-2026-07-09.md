@@ -264,3 +264,25 @@ Interpretation:
 
 - Generic callback swizzling is likely the wrong shape for FMIPCore Swift methods.
 - The next step should avoid FMIPCore callback swizzling and inspect the SiriFindMy provider layer, especially `FMIPSyncDeviceProvider`, `devicesPublisher`, and retained provider/session objects.
+
+## Provider runtime helper install
+
+Installed helper checksum:
+
+```text
+a76211d6b7eff967b56647c6831f12e6
+```
+
+Added route:
+
+```text
+POST /api/v1/icloud/findmy/devices/debug/provider-runtime
+```
+
+This route calls helper action:
+
+```text
+debug-findmy-devices-provider-runtime
+```
+
+The helper selects the Devices view and returns SiriFindMy/FMIP provider runtime diagnostics plus object graph/session summaries. It does not install FMIPCore callback swizzles and does not call `FMIPManager.devices`.

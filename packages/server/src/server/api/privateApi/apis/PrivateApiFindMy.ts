@@ -34,6 +34,12 @@ export class PrivateApiFindMy extends PrivateApiAction {
         return this.sendApiMessage(action, null, request, this.process);
     }
 
+    async debugDevicesProviderRuntime(): Promise<TransactionResult> {
+        const action = "debug-findmy-devices-provider-runtime";
+        const request = new TransactionPromise(TransactionType.FIND_MY);
+        return this.sendApiMessage(action, null, request, this.process);
+    }
+
     async refreshItems(): Promise<TransactionResult> {
         const action = "refresh-findmy-items";
         const request = new TransactionPromise(TransactionType.FIND_MY);

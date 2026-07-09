@@ -132,6 +132,11 @@ export class HttpRoutes {
                         controller: FindMyRouter.debugDevicesFMIPCallbacks
                     },
                     {
+                        method: HttpMethod.POST,
+                        path: "findmy/devices/debug/provider-runtime",
+                        controller: FindMyRouter.debugDevicesProviderRuntime
+                    },
+                    {
                         method: HttpMethod.GET,
                         path: "findmy/items",
                         controller: FindMyRouter.items
