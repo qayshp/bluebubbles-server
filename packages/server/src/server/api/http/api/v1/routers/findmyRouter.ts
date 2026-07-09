@@ -32,6 +32,21 @@ export class FindMyRouter {
         }
     }
 
+    static async debugDevicesDelayed(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.debugDevicesDelayed();
+            return new Success(ctx, {
+                message: "Successfully fetched delayed Find My device diagnostics!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to fetch delayed Find My device diagnostics!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async refreshItems(ctx: RouterContext, _: Next) {
         try {
             const locations = await FindMyInterface.refreshItems();

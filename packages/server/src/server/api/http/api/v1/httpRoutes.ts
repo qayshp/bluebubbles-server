@@ -122,6 +122,11 @@ export class HttpRoutes {
                         controller: FindMyRouter.refreshDevices
                     },
                     {
+                        method: HttpMethod.POST,
+                        path: "findmy/devices/debug/delayed",
+                        controller: FindMyRouter.debugDevicesDelayed
+                    },
+                    {
                         method: HttpMethod.GET,
                         path: "findmy/items",
                         controller: FindMyRouter.items

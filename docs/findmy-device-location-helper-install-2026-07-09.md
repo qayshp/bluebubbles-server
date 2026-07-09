@@ -84,3 +84,21 @@ The item refresh produced useful diagnostics even though it did not return items
 3. If delayed FMIPManager snapshots still return no location fields, instrument FMIPCore's device update callback around the strings `FMIPManager: didReceiveDevices` and `FMIPDataManager: updateDevicesLocations`.
 
 The next implemented step should be item 1. It gives us a bounded device-specific probe without risking the Android-facing `/devices/refresh` behavior.
+
+## Implemented next step
+
+Added a bounded delayed device diagnostic route:
+
+- `POST /api/v1/icloud/findmy/devices/debug/delayed`
+
+This route calls the private API action `debug-findmy-devices-delayed` in `com.apple.findmy`. The helper selects the Devices segment, starts FMIPManager when possible, captures an immediate `FMIPManager.devices` snapshot, waits 3 seconds, then captures and returns a delayed snapshot. It deliberately avoids the existing `allBeaconsWithCompletion:` fallback so the route should always return after the fixed delay.
+
+The updated installed helper md5 is:
+
+- `30da432bfafe2ec6e2fd9773bfc256e6`
+
+Expected interpretation:
+
+- Non-zero delayed device count with location fields means FMIPCore can feed the Android device route.
+- Zero initial count but non-zero delayed count means the normal route needs asynchronous waiting before returning.
+- Zero delayed count means the next target should be swizzling/logging the FMIPCore callbacks around `FMIPManager: didReceiveDevices` and `FMIPDataManager: updateDevicesLocations`.
