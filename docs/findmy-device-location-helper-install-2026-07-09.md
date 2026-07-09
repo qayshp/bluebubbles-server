@@ -49,3 +49,38 @@ Important outcomes:
 ## Next implementation step if immediate refresh is empty
 
 Add a dedicated delayed device debug action that starts FMIPManager refresh, waits briefly, then snapshots `FMIPManager.devices` and any swizzled `setLocation:` events. This avoids changing the normal Android route timing until we know whether FMIPCore is simply asynchronous.
+
+## Runtime test result
+
+The server was started from this branch with Node 20.20.2 / npm 10.8.2 because the system Node 26 / npm 11 rejects the repository's current `devEngines.node` metadata. The HTTP server started on port `1234`, the private API socket server started on port `45675`, and the Find My helper connected via `com.apple.findmy`.
+
+Android-facing route results from localhost:
+
+- `POST /api/v1/icloud/findmy/friends/refresh`: HTTP 200, 8 records.
+- `POST /api/v1/icloud/findmy/devices/refresh`: client request hung long enough to require cancellation; no response file was written.
+- `POST /api/v1/icloud/findmy/items/refresh`: HTTP 200, but no item records.
+- `GET /api/v1/icloud/findmy/friends`: HTTP 200, 8 records.
+- `GET /api/v1/icloud/findmy/devices`: HTTP 200, `data: null`.
+- `GET /api/v1/icloud/findmy/items`: HTTP 200, `data: null`.
+
+The `GET` device/item nulls are expected on Sequoia because those routes still call the disabled cache readers and log:
+
+- `Cannot fetch FindMy devices on macOS Sequoia or later.`
+- `Cannot fetch FindMy items on macOS Sequoia or later.`
+
+The item refresh produced useful diagnostics even though it did not return items:
+
+- SearchParty completion produced `SPLocationFetchContext`.
+- `lastOnlineLocationInfo` was non-empty with 10 UUID keys.
+- `searchLocationSources` was non-empty with 12 source strings.
+- Repeated `SPLocationFetchResult.locationsByBeaconIdentifier` captures were empty.
+- `receivedUpdatedLocation:` delivered an `SPLocationFetchResult`, but `_locationsByBeaconIdentifier` was an empty dictionary.
+- The active table scan still showed `FMDevicesListDataSource` cells shortly before the item data source was observed, then `FMItemsListDataSource` had `visible_cell_count: 0` and `ui_item_count: 0`.
+
+## Suggested next steps after this run
+
+1. Add a dedicated delayed device debug action that dispatches `refresh-findmy-devices`, waits for helper-side asynchronous FMIP updates, then snapshots `FMIPManager.devices`, FMIP device location fields, and any `setLocation:` / `setCrowdSourcedLocation:` swizzle events.
+2. Keep the normal Android route unchanged until that diagnostic proves whether the hang is route timing, helper transaction completion, or an FMIPManager initialization issue.
+3. If delayed FMIPManager snapshots still return no location fields, instrument FMIPCore's device update callback around the strings `FMIPManager: didReceiveDevices` and `FMIPDataManager: updateDevicesLocations`.
+
+The next implemented step should be item 1. It gives us a bounded device-specific probe without risking the Android-facing `/devices/refresh` behavior.
