@@ -93,7 +93,7 @@ Added a bounded delayed device diagnostic route:
 
 This route calls the private API action `debug-findmy-devices-delayed` in `com.apple.findmy`. The helper selects the Devices segment, starts FMIPManager when possible, captures an immediate `FMIPManager.devices` snapshot, waits 3 seconds, then captures and returns a delayed snapshot. It deliberately avoids the existing `allBeaconsWithCompletion:` fallback so the route should always return after the fixed delay.
 
-The updated installed helper md5 is:
+The first installed helper md5 for this route was:
 
 - `30da432bfafe2ec6e2fd9773bfc256e6`
 
@@ -102,3 +102,16 @@ Expected interpretation:
 - Non-zero delayed device count with location fields means FMIPCore can feed the Android device route.
 - Zero initial count but non-zero delayed count means the normal route needs asynchronous waiting before returning.
 - Zero delayed count means the next target should be swizzling/logging the FMIPCore callbacks around `FMIPManager: didReceiveDevices` and `FMIPDataManager: updateDevicesLocations`.
+
+## Follow-up hardening
+
+The first live call to `POST /api/v1/icloud/findmy/devices/debug/delayed` reached Find My and then the Find My helper disconnected at the delayed snapshot point. The request timed out with no response. That points to an unsafe accessor or KVC path while serializing populated `FMIPManager.devices`.
+
+The helper serializer was hardened to catch exceptions per FMIP device and report:
+
+- `serialization_error_count`
+- `serialization_errors`
+
+The updated installed helper md5 after this hardening is:
+
+- `d340b14c62f6d0cb4ea6790bff4e92de`
