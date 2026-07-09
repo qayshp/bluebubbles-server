@@ -47,6 +47,21 @@ export class FindMyRouter {
         }
     }
 
+    static async debugDevicesFMIPCallbacks(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.debugDevicesFMIPCallbacks();
+            return new Success(ctx, {
+                message: "Successfully fetched Find My FMIP callback diagnostics!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to fetch Find My FMIP callback diagnostics!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async refreshItems(ctx: RouterContext, _: Next) {
         try {
             const locations = await FindMyInterface.refreshItems();

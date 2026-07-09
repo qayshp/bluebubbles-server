@@ -176,3 +176,29 @@ The count-only helper still crashed Find My:
 - A 30 second curl call returned HTTP `000` with no response body.
 
 This means even evaluating `FMIPManager.devices.count` through the current handwritten Swift bridge is unsafe after refresh. The next server-facing work should wait until the helper finds a safer FMIPCore access path, most likely by inspecting the private framework metadata for the true accessor ABI or by hooking callback/update methods instead of pulling the property.
+
+## FMIP callback watch helper install
+
+Installed the helper that adds the isolated callback-watch route:
+
+```text
+POST /api/v1/icloud/findmy/devices/debug/fmip-callbacks
+```
+
+This route calls helper action:
+
+```text
+debug-findmy-devices-fmip-callbacks
+```
+
+The route selects the Devices view, starts `FMIPManager`, waits 8 seconds, and returns callback/runtime diagnostics. It does not call `FMIPManager.devices` or serialize device records.
+
+The installed helper md5 for this attempt is:
+
+- `db2eeb6e4ae3d7af6a7f9ebca2d2e298`
+
+Interpretation:
+
+- If the route returns with `fmip_callbacks.callback_count > 0`, inspect callback arguments for location-bearing objects.
+- If the route returns with no callbacks, move to a SiriFindMy provider-specific probe.
+- If the route crashes, reduce the watcher to one selector/class family at a time.

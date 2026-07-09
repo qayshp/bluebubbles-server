@@ -127,6 +127,11 @@ export class HttpRoutes {
                         controller: FindMyRouter.debugDevicesDelayed
                     },
                     {
+                        method: HttpMethod.POST,
+                        path: "findmy/devices/debug/fmip-callbacks",
+                        controller: FindMyRouter.debugDevicesFMIPCallbacks
+                    },
+                    {
                         method: HttpMethod.GET,
                         path: "findmy/items",
                         controller: FindMyRouter.items
