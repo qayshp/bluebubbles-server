@@ -466,3 +466,34 @@ Interpretation:
 - Removing Swift `Mirror` value traversal did not make the retained-manager path safe.
 - The crash now implicates either retained `FMIPManager` startup/refresh state or delayed `object_getIvar(manager, dataManager)` access.
 - The next device-location lead should stop creating a separate `FMIPManager`; instead, inspect Find My's existing object graph for an app-owned `FMIPManager` or `FMIPDataManager` and only then add one-field-at-a-time value reads.
+
+## App-owned FMIP candidate helper install
+
+Installed helper checksum:
+
+```text
+d27c53b681b97f5e8de58f411c634874
+```
+
+Extended the existing provider-runtime route:
+
+```text
+POST /api/v1/icloud/findmy/devices/debug/provider-runtime
+```
+
+New diagnostic field:
+
+```text
+app_owned_fmip_candidates
+```
+
+Reasoning:
+
+- The retained-manager path crashed even after removing Swift `Mirror` value traversal.
+- The provider-runtime route has returned safely because it does not create a new `FMIPManager`, call `FMIPManager.devices`, or swizzle FMIPCore callbacks.
+- The next lower-risk move is to use that existing route to look for an app-owned `FMIPManager`, `FMIPDataManager`, `dataManager`, `fmipManager`, `devicesProvider`, or `locationProvider` path in the Find My object graph.
+
+Expected interpretation:
+
+- If candidates appear, the next probe should follow the candidate path and inspect one object/field at a time.
+- If no candidates appear, the existing root/session object graph is not deep or broad enough, and the next step should expand graph roots or inspect active Devices data-source ivars more directly.
