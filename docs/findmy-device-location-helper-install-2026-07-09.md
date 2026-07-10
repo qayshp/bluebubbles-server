@@ -497,3 +497,30 @@ Expected interpretation:
 
 - If candidates appear, the next probe should follow the candidate path and inspect one object/field at a time.
 - If no candidates appear, the existing root/session object graph is not deep or broad enough, and the next step should expand graph roots or inspect active Devices data-source ivars more directly.
+
+## App-owned FMIP candidate route result
+
+The provider-runtime route returned successfully with the added candidate field:
+
+- HTTP 200.
+- Response size: 10,526 bytes.
+- Request duration: 12 seconds.
+- No Find My crash.
+- `selected_devices_segment`: `true`.
+- Active Devices data source: `FindMy.FMDevicesListDataSource`.
+- Visible device cells: 13.
+
+Candidate counts:
+
+```json
+{
+  "objectGraph": 0,
+  "sessionObjects": 0
+}
+```
+
+Interpretation:
+
+- The added candidate summary is safe.
+- The currently bounded object graph did not reveal an app-owned `FMIPManager`, `FMIPDataManager`, `dataManager`, `fmipManager`, `devicesProvider`, or `locationProvider`.
+- Since the Devices UI and `FMDevicesListDataSource` are active, the next route should inspect the active data-source/list-controller ivars and methods directly, including Swift ivar metadata that does not appear as Objective-C object ivars.
