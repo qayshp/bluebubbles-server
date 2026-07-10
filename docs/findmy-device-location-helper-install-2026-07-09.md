@@ -564,3 +564,56 @@ Expected interpretation:
 - Readable data-source KVC fields may expose device arrays, view models, snapshots, or providers.
 - Swift ivar metadata may expose field names even when Objective-C cannot read the values directly.
 - If the route crashes, the next version should remove KVC reads and keep metadata only.
+
+## Devices data-source first route result
+
+The first data-source route reached Find My but returned too much data:
+
+- Request started at `2026-07-10 09:41:18`.
+- BlueBubbles logged `Failed to decode BlueBubblesHelper data!`.
+- A 90 second curl call returned HTTP `000` with no response body.
+- Find My did not crash.
+
+Useful data visible before truncation:
+
+- Active data source: `FindMy.FMDevicesListDataSource`.
+- Active delegate/list controller: `_TtGC6FindMy20FMListViewControllerCS_23FMDevicesListDataSourceCS_14FMNoDeviceViewCS_21FMDevicesTerminalView_`.
+- `FMDevicesListDataSource` Swift ivars:
+  - `delegate`
+  - `mediator`
+  - `tableView`
+  - `deviceSubscription`
+  - `locationSubscription`
+  - `cellsViewModel`
+  - `itemAger`
+  - `updateQueue`
+  - `delayedUpdateWorkItem`
+  - `isRemovingCell`
+  - `_listTitle`
+  - `updatesEnabled`
+- Obvious KVC keys such as `devices`, `viewModels`, `cellsViewModel`, `provider`, `fmipManager`, `dataManager`, and `location` returned nil or unreadable on the data source.
+
+## Bounded Devices data-source helper install
+
+Installed helper checksum:
+
+```text
+053b5c560b014f963799f56de55d5a03
+```
+
+This keeps the same route:
+
+```text
+POST /api/v1/icloud/findmy/devices/debug/data-source
+```
+
+Payload reductions:
+
+- Runtime method and ivar scans now include only declaring classes whose names contain `FindMy`.
+- Visible cell samples are limited to 3.
+- The table view returns a shallow summary.
+- KVC readable-result and method limits are smaller.
+
+Expected interpretation:
+
+- If the bounded route returns, use `cellsViewModel`, `deviceSubscription`, `locationSubscription`, or `mediator` as the next focused targets.
