@@ -122,6 +122,36 @@ export class FindMyRouter {
         }
     }
 
+    static async debugDevicesProviderModel(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.debugDevicesProviderModel();
+            return new Success(ctx, {
+                message: "Successfully fetched Find My Devices provider model diagnostics!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to fetch Find My Devices provider model diagnostics!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
+    static async debugDevicesDataManagerDevices(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.debugDevicesDataManagerDevices();
+            return new Success(ctx, {
+                message: "Successfully fetched Find My Devices data-manager device diagnostics!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to fetch Find My Devices data-manager device diagnostics!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async debugDevicesFMIPDataManager(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.debugDevicesFMIPDataManager();

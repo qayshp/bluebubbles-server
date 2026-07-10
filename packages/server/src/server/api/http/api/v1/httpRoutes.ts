@@ -153,6 +153,16 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.POST,
+                        path: "findmy/devices/debug/provider-model",
+                        controller: FindMyRouter.debugDevicesProviderModel
+                    },
+                    {
+                        method: HttpMethod.POST,
+                        path: "findmy/devices/debug/datamanager-devices",
+                        controller: FindMyRouter.debugDevicesDataManagerDevices
+                    },
+                    {
+                        method: HttpMethod.POST,
                         path: "findmy/devices/debug/fmip-datamanager",
                         controller: FindMyRouter.debugDevicesFMIPDataManager
                     },

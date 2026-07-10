@@ -20,8 +20,102 @@ export class FindMyInterface {
         return normalizeFindMyLocationItems(Server().findMyCache.getAll());
     }
 
+    private static compactValue(value: any): any {
+        if (value && typeof value === "object" && "value" in value) return value.value;
+        return value;
+    }
+
+    private static finiteNumber(value: any): number | undefined {
+        const numberValue = Number(value);
+        return Number.isFinite(numberValue) ? numberValue : undefined;
+    }
+
+    private static stringValue(value: any): string | undefined {
+        return typeof value === "string" && value.length > 0 ? value : undefined;
+    }
+
+    private static transformFMIPLocation(location: any): FindMyDevice["location"] | undefined {
+        const coreLocation = location?.location ?? location?.direct_location ?? location;
+        const latitude = FindMyInterface.finiteNumber(coreLocation?.latitude);
+        const longitude = FindMyInterface.finiteNumber(coreLocation?.longitude);
+        if (latitude == null || longitude == null) return undefined;
+
+        const timestamp = Date.parse(String(coreLocation?.timestamp ?? ""));
+        return {
+            latitude,
+            longitude,
+            horizontalAccuracy: FindMyInterface.finiteNumber(coreLocation?.horizontal_accuracy),
+            verticalAccuracy: FindMyInterface.finiteNumber(coreLocation?.vertical_accuracy),
+            timeStamp: Number.isFinite(timestamp) ? timestamp : undefined,
+            floorLevel: FindMyInterface.finiteNumber(FindMyInterface.compactValue(location?.floor)),
+            isInaccurate: Boolean(FindMyInterface.compactValue(location?.isInaccurate) ?? false),
+            isOld: Boolean(FindMyInterface.compactValue(location?.isOld) ?? false),
+            locationFinished: Boolean(FindMyInterface.compactValue(location?.isLocationFinished) ?? false)
+        };
+    }
+
+    private static transformFMIPAddress(address: any): FindMyDevice["address"] | undefined {
+        if (!address || typeof address !== "object") return undefined;
+
+        const label = FindMyInterface.stringValue(address.label);
+        const formatted = FindMyInterface.stringValue(address.mapItemFormattedAddress)
+            ?? FindMyInterface.stringValue(address.largeAddressModern)
+            ?? FindMyInterface.stringValue(address.mediumAddressModern)
+            ?? label;
+
+        return {
+            label,
+            countryCode: FindMyInterface.stringValue(address.countryCode),
+            administrativeArea: FindMyInterface.stringValue(address.administrativeArea),
+            locality: FindMyInterface.stringValue(address.locality),
+            mapItemFullAddress: formatted,
+            formattedAddressLines: formatted ? [formatted] : []
+        };
+    }
+
+    private static transformFMIPDeviceRecord(record: any): FindMyDevice {
+        const id = FindMyInterface.stringValue(record?.identifier);
+        const location = FindMyInterface.transformFMIPLocation(record?.location);
+        const crowdSourcedLocation = FindMyInterface.transformFMIPLocation(record?.crowdSourcedLocation);
+        const rawDeviceModel = FindMyInterface.stringValue(record?.rawDeviceModel)
+            ?? FindMyInterface.stringValue(record?.model);
+        const displayName = FindMyInterface.stringValue(record?.displayName);
+
+        return {
+            id,
+            identifier: id,
+            name: FindMyInterface.stringValue(record?.name),
+            deviceDisplayName: displayName,
+            modelDisplayName: displayName ?? rawDeviceModel,
+            deviceModel: rawDeviceModel,
+            rawDeviceModel,
+            deviceClass: FindMyInterface.stringValue(record?.category),
+            batteryLevel: FindMyInterface.finiteNumber(record?.batteryLevel),
+            batteryStatus: typeof record?.batteryStatus === "string" ? record.batteryStatus : "Unknown",
+            address: FindMyInterface.transformFMIPAddress(record?.address),
+            location,
+            crowdSourcedLocation: crowdSourcedLocation ?? location,
+            safeLocations: [],
+            locationEnabled: location != null,
+            locationCapable: true,
+            isMac: String(record?.category ?? record?.model ?? "").toLowerCase().includes("mac"),
+            deviceDiscoveryId: FindMyInterface.stringValue(record?.discoveryIdentifier),
+            baUuid: FindMyInterface.stringValue(record?.baIdentifier),
+            features: {}
+        } as FindMyDevice;
+    }
+
+    private static transformFMIPDataManagerDevices(data: any): FindMyDevice[] {
+        const records = data?.diagnostics?.devices_data_manager?.devices_data_manager_devices?.devices_compact?.devices;
+        if (!Array.isArray(records)) return [];
+        return records.map(record => FindMyInterface.transformFMIPDeviceRecord(record));
+    }
+
     static async getDevices(): Promise<Array<FindMyDevice> | null> {
         if (isMinSequoia) {
+            const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
+            if (papiEnabled) return await FindMyInterface.refreshDevices();
+
             Server().logger.debug('Cannot fetch FindMy devices on macOS Sequoia or later.');
             return null;
         }
@@ -72,12 +166,11 @@ export class FindMyInterface {
         if (papiEnabled && isMinSequoia) {
             checkPrivateApiStatus();
             await this.selectFindMyView("Devices");
-            const result = await Server().privateApi.findmy.refreshDevices();
-            const diagnostics = result?.data?.diagnostics;
-            if (diagnostics) {
-                Server().logger.debug(`Find My device refresh diagnostics: ${JSON.stringify(diagnostics)}`);
-            }
-            return result?.data?.devices ?? [];
+            const result = await Server().privateApi.findmy.debugDevicesDataManagerDevices();
+            const devices = FindMyInterface.transformFMIPDataManagerDevices(result?.data);
+            const locatedDevices = devices.filter(device => device.location != null).length;
+            Server().logger.debug(`Find My device refresh via FMIPDataManager: devices=${devices.length} withLocation=${locatedDevices}`);
+            return devices;
         }
 
         await this.refreshLocationsAccessibility();
@@ -194,6 +287,46 @@ export class FindMyInterface {
         const diagnostics = result?.data?.diagnostics;
         if (diagnostics) {
             Server().logger.debug(`Find My Devices data-source model diagnostics: ${JSON.stringify(diagnostics)}`);
+        }
+        return result?.data ?? {};
+    }
+
+    static async debugDevicesProviderModel(): Promise<any> {
+        const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
+        if (!papiEnabled || !isMinSequoia) {
+            return {
+                enabled: false,
+                reason: "Find My Devices provider model diagnostics require the private API on macOS Sequoia or later."
+            };
+        }
+
+        checkPrivateApiStatus();
+        await this.selectFindMyView("Devices");
+        const result = await Server().privateApi.findmy.debugDevicesProviderModel();
+        const diagnostics = result?.data?.diagnostics;
+        if (diagnostics) {
+            Server().logger.debug(`Find My Devices provider model diagnostics: ${JSON.stringify(diagnostics)}`);
+        }
+        return result?.data ?? {};
+    }
+
+    static async debugDevicesDataManagerDevices(): Promise<any> {
+        const papiEnabled = Server().repo.getConfig("enable_private_api") as boolean;
+        if (!papiEnabled || !isMinSequoia) {
+            return {
+                enabled: false,
+                reason: "Find My Devices data-manager device diagnostics require the private API on macOS Sequoia or later."
+            };
+        }
+
+        checkPrivateApiStatus();
+        await this.selectFindMyView("Devices");
+        const result = await Server().privateApi.findmy.debugDevicesDataManagerDevices();
+        const compact = result?.data?.diagnostics?.devices_data_manager?.devices_data_manager_devices?.devices_compact;
+        if (compact) {
+            const devices = Array.isArray(compact.devices) ? compact.devices : [];
+            const locationCount = devices.filter((device: any) => device?.locationPresent === true).length;
+            Server().logger.debug(`Find My Devices data-manager compact diagnostics: devices=${compact.device_count ?? "unknown"} returned=${compact.devices_returned ?? devices.length} withLocation=${locationCount}`);
         }
         return result?.data ?? {};
     }
