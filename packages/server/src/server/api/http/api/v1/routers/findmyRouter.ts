@@ -107,6 +107,21 @@ export class FindMyRouter {
         }
     }
 
+    static async debugDevicesDataSourceModel(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.debugDevicesDataSourceModel();
+            return new Success(ctx, {
+                message: "Successfully fetched Find My Devices data-source model diagnostics!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to fetch Find My Devices data-source model diagnostics!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async debugDevicesFMIPDataManager(ctx: RouterContext, _: Next) {
         try {
             const data = await FindMyInterface.debugDevicesFMIPDataManager();

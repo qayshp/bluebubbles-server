@@ -258,6 +258,56 @@ The scoped `FMIPManager.didReceiveDevices` route also crashed Find My:
 - Request started at `2026-07-09 09:25:32`.
 - The Find My helper socket ended at `2026-07-09 09:25:35`.
 - BlueBubbles marked Find My as force quit and relaunched it.
+
+## Devices data-source model route
+
+Installed helper checksum:
+
+```text
+d48afe4c788e5e828a4453f8073f3717
+```
+
+Added the server-facing route:
+
+```text
+POST /api/v1/icloud/findmy/devices/debug/data-source-model
+```
+
+This sends helper action:
+
+```text
+debug-findmy-devices-data-source-model
+```
+
+Runtime result:
+
+- HTTP 200.
+- Runtime about 7.2 seconds.
+- Payload size about 63.8 KB.
+- Find My did not crash.
+
+The route starts from the active app-owned `FindMy.FMDevicesListDataSource` and uses Swift `Mirror` to sample the data-source model. It avoids the unsafe paths that previously crashed Find My:
+
+- no newly created `FMIPManager`
+- no `FMIPManager.devices` accessor
+- no `FMIPManager.dataManager`
+- no FMIPCore callback swizzles
+
+Important result:
+
+- `cellsViewModel` is `Swift.Array<Swift.Array<FindMy.FMDeviceCellViewModel>>`.
+- Observed section counts were `21`, `1`, `11`, and `4`.
+- Sampled rows exposed UI-ready fields such as title, subtitle, distance, rawDistance, timestamp, online state, locating state, inaccurate state, owner, and battery state.
+- The sampled rows did not expose per-device coordinates directly.
+- `FMLocationProvider.currentLocation` did expose a `CLLocation`, but that appears to be the Mac/current-user location provider state rather than a coordinate for an individual remote device.
+
+Next server-facing diagnostic:
+
+- Add a provider/manager focused route that starts from `FMMediator.devicesProvider`.
+- Mirror `FMDevicesProvider.shares`.
+- Mirror the app-owned `FMIPCore.FMIPManager` shallowly without invoking `FMIPManager.devices`.
+- Inspect `refreshingController`, `beaconRefreshingController`, and `safeLocationRefreshingController`.
+- Keep scalar `CLLocation` summaries enabled so any real location-bearing object reports coordinate, accuracy, and timestamp.
 - A 45 second curl call returned HTTP `000` with no response body.
 
 ## Devices data-source Swift mirror route
