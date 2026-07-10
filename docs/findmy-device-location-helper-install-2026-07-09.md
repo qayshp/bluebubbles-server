@@ -450,3 +450,19 @@ Expected interpretation:
 
 - If this returns, the retained manager's `dataManager` can be reached and the next step is one-field-at-a-time inspection.
 - If it crashes, the retained manager path itself is unsafe after refresh and the next target should be an app-owned manager/data-manager object discovered through the Find My object graph.
+
+## Metadata-only FMIPDataManager route result
+
+The metadata-only route still crashed Find My:
+
+- Request started at `2026-07-10 01:16:57`.
+- The Find My helper socket ended at `2026-07-10 01:17:02`.
+- BlueBubbles marked Find My as force quit and relaunched it.
+- A 90 second curl call returned HTTP `000` with no response body.
+- No matching Find My crash report was written to `~/Library/Logs/DiagnosticReports`.
+
+Interpretation:
+
+- Removing Swift `Mirror` value traversal did not make the retained-manager path safe.
+- The crash now implicates either retained `FMIPManager` startup/refresh state or delayed `object_getIvar(manager, dataManager)` access.
+- The next device-location lead should stop creating a separate `FMIPManager`; instead, inspect Find My's existing object graph for an app-owned `FMIPManager` or `FMIPDataManager` and only then add one-field-at-a-time value reads.
