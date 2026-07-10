@@ -423,3 +423,30 @@ Interpretation:
 - The crash happened around the delayed snapshot point, so the unsafe operation is likely Swift `Mirror` traversal of the retained manager's `dataManager` or one of the selected `FMIPDataManager` fields.
 - This still keeps `FMIPDataManager` as the best lead because runtime metadata exposed the right ivars.
 - The next probe should be metadata-only: retain/start `FMIPManager`, reach `dataManager` if possible, and report only class/ivar names before touching any `devices` or `crowdSourcedLocations` values.
+
+## Metadata-only FMIPDataManager helper install
+
+Installed helper checksum:
+
+```text
+ce071df9bd50a6521706770ed545316c
+```
+
+This keeps the same server-facing route:
+
+```text
+POST /api/v1/icloud/findmy/devices/debug/fmip-datamanager
+```
+
+Changes from the crashed build:
+
+- Snapshot mode is now `objc_runtime_ivar_metadata_retained_fmip_manager_data_manager`.
+- The helper no longer uses Swift `Mirror` to summarize `FMIPDataManager` values.
+- The helper does not read `devices`, `crowdSourcedLocations`, or any other location-bearing value.
+- The helper uses Objective-C runtime metadata to report manager/data-manager class names and ivar names.
+- The only object value read is the retained manager's `dataManager` reference through `object_getIvar`.
+
+Expected interpretation:
+
+- If this returns, the retained manager's `dataManager` can be reached and the next step is one-field-at-a-time inspection.
+- If it crashes, the retained manager path itself is unsafe after refresh and the next target should be an app-owned manager/data-manager object discovered through the Find My object graph.
