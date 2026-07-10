@@ -408,3 +408,18 @@ Expected interpretation:
 - If `devices` or `crowdSourcedLocations` has non-zero counts and no crash, add a narrow serializer for those element types.
 - If location-like child labels appear but no direct `CLLocation` is found, inspect the referenced child type next.
 - If this route crashes, reduce the Swift mirror summary to manager child labels only before touching the `dataManager` value.
+
+## FMIPDataManager ivar probe route result
+
+The broad Swift `Mirror` value-summary route crashed Find My:
+
+- Request started at `2026-07-10 01:10:06`.
+- The Find My helper socket ended at `2026-07-10 01:10:11`.
+- BlueBubbles marked Find My as force quit and relaunched it.
+- A 90 second curl call returned HTTP `000` with no response body.
+
+Interpretation:
+
+- The crash happened around the delayed snapshot point, so the unsafe operation is likely Swift `Mirror` traversal of the retained manager's `dataManager` or one of the selected `FMIPDataManager` fields.
+- This still keeps `FMIPDataManager` as the best lead because runtime metadata exposed the right ivars.
+- The next probe should be metadata-only: retain/start `FMIPManager`, reach `dataManager` if possible, and report only class/ivar names before touching any `devices` or `crowdSourcedLocations` values.
