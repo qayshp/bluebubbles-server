@@ -143,6 +143,11 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.POST,
+                        path: "findmy/devices/debug/data-source-mirror",
+                        controller: FindMyRouter.debugDevicesDataSourceMirror
+                    },
+                    {
+                        method: HttpMethod.POST,
                         path: "findmy/devices/debug/fmip-datamanager",
                         controller: FindMyRouter.debugDevicesFMIPDataManager
                     },

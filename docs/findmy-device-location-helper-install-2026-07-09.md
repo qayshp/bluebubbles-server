@@ -260,6 +260,63 @@ The scoped `FMIPManager.didReceiveDevices` route also crashed Find My:
 - BlueBubbles marked Find My as force quit and relaunched it.
 - A 45 second curl call returned HTTP `000` with no response body.
 
+## Devices data-source Swift mirror route
+
+Installed helper checksum:
+
+```text
+024cb2d3385a0fe6b17e194cee6be007
+```
+
+Added server route:
+
+```text
+POST /api/v1/icloud/findmy/devices/debug/data-source-mirror
+```
+
+This route uses helper action:
+
+```text
+debug-findmy-devices-data-source-mirror
+```
+
+Purpose:
+
+- Inspect the active app-owned `FindMy.FMDevicesListDataSource` with Swift `Mirror`.
+- Avoid `FMIPManager.devices`, `FMIPManager.dataManager`, retained/new `FMIPManager`, and FMIPCore callback swizzles.
+- Keep the prior bounded Objective-C metadata route intact at `/findmy/devices/debug/data-source`.
+
+Build notes:
+
+- Full Xcode build succeeded with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
+- The helper build required `ENABLE_USER_SCRIPT_SANDBOXING=NO`; Xcode's user-script sandbox blocked the CocoaPods manifest script while it loaded system/private framework dependencies.
+- The server webpack build succeeded with Node 20.20.2.
+
+Runtime result:
+
+- Route returned HTTP 200.
+- Runtime was about 7 seconds.
+- Response size was about 22.7 KB.
+- Find My stayed alive.
+
+Important result:
+
+- `cellsViewModel` is readable through Swift reflection as `Swift.Array<Swift.Array<FindMy.FMDeviceCellViewModel>>`.
+- It had 4 sections with counts `21`, `1`, `11`, and `4`.
+- This is the first non-crashing path that exposes the full Devices backing list rather than only visible UI cells.
+
+The same route exposed a useful mediator path:
+
+- `FindMy.FMMediator.devicesProvider`
+- `FindMy.FMMediator.locationProvider`
+- `FindMy.FMDevicesSubscription`
+- `FindMy.FMLocationSubscription`
+
+Next server-facing route:
+
+- Add a focused data-source model probe that samples `cellsViewModel` row objects and the mediator provider/subscription objects one level deeper.
+- Continue keeping the Android-facing `/devices/refresh` route unchanged until a stable coordinate source is proven.
+
 Interpretation:
 
 - Generic callback swizzling is likely the wrong shape for FMIPCore Swift methods.
