@@ -77,6 +77,21 @@ export class FindMyRouter {
         }
     }
 
+    static async debugDevicesFMIPDataManager(ctx: RouterContext, _: Next) {
+        try {
+            const data = await FindMyInterface.debugDevicesFMIPDataManager();
+            return new Success(ctx, {
+                message: "Successfully fetched Find My FMIPDataManager diagnostics!",
+                data
+            }).send();
+        } catch (ex: any) {
+            throw new ServerError({
+                message: "Failed to fetch Find My FMIPDataManager diagnostics!",
+                error: ex?.message ?? ex.toString()
+            });
+        }
+    }
+
     static async refreshItems(ctx: RouterContext, _: Next) {
         try {
             const locations = await FindMyInterface.refreshItems();

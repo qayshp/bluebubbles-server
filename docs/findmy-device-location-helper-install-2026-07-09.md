@@ -374,3 +374,37 @@ Next target:
 - Follow its `dataManager` ivar.
 - Inspect `FMIPDataManager` ivars directly with bounded summaries, starting with `devices`, `crowdSourcedLocations`, and `deviceConnectedStates`.
 - Continue avoiding `FMIPManager.devices`, which crashed even when accessed only for `.count`.
+
+## FMIPDataManager ivar probe install
+
+Installed helper checksum:
+
+```text
+3d23119a7bdb365ac6ea013b7f757de3
+```
+
+Added server-facing route:
+
+```text
+POST /api/v1/icloud/findmy/devices/debug/fmip-datamanager
+```
+
+This route calls helper action:
+
+```text
+debug-findmy-devices-fmip-datamanager
+```
+
+Reasoning:
+
+- The bounded provider runtime route showed that `FMIPManager` owns a `dataManager` ivar.
+- Runtime metadata showed that `FMIPDataManager` has likely useful ivars: `devices`, `crowdSourcedLocations`, `crowdSourcedOriginalLocations`, `deviceConnectedStates`, `safeLocations`, `safeLocationsMapping`, `owner`, and `familyMembers`.
+- Direct calls to `FMIPManager.devices`, including count-only calls, crashed Find My, so this probe intentionally avoids that accessor.
+- Broad callback swizzling also crashed Find My, so this probe uses a retained `FMIPManager` plus Swift `Mirror` to inspect `dataManager` and its ivars in a bounded way.
+
+Expected interpretation:
+
+- If `data_manager_present` is false, the retained manager path is not enough and the next target should be finding the app-owned `FMIPManager`/`FMIPDataManager` instance.
+- If `devices` or `crowdSourcedLocations` has non-zero counts and no crash, add a narrow serializer for those element types.
+- If location-like child labels appear but no direct `CLLocation` is found, inspect the referenced child type next.
+- If this route crashes, reduce the Swift mirror summary to manager child labels only before touching the `dataManager` value.

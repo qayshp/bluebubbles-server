@@ -137,6 +137,11 @@ export class HttpRoutes {
                         controller: FindMyRouter.debugDevicesProviderRuntime
                     },
                     {
+                        method: HttpMethod.POST,
+                        path: "findmy/devices/debug/fmip-datamanager",
+                        controller: FindMyRouter.debugDevicesFMIPDataManager
+                    },
+                    {
                         method: HttpMethod.GET,
                         path: "findmy/items",
                         controller: FindMyRouter.items
