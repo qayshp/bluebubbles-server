@@ -40,6 +40,12 @@ export class PrivateApiFindMy extends PrivateApiAction {
         return this.sendApiMessage(action, null, request, this.process);
     }
 
+    async debugDevicesDataSource(): Promise<TransactionResult> {
+        const action = "debug-findmy-devices-data-source";
+        const request = new TransactionPromise(TransactionType.FIND_MY);
+        return this.sendApiMessage(action, null, request, this.process);
+    }
+
     async debugDevicesFMIPDataManager(): Promise<TransactionResult> {
         const action = "debug-findmy-devices-fmip-datamanager";
         const request = new TransactionPromise(TransactionType.FIND_MY);

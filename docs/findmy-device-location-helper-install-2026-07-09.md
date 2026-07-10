@@ -524,3 +524,43 @@ Interpretation:
 - The added candidate summary is safe.
 - The currently bounded object graph did not reveal an app-owned `FMIPManager`, `FMIPDataManager`, `dataManager`, `fmipManager`, `devicesProvider`, or `locationProvider`.
 - Since the Devices UI and `FMDevicesListDataSource` are active, the next route should inspect the active data-source/list-controller ivars and methods directly, including Swift ivar metadata that does not appear as Objective-C object ivars.
+
+## Devices data-source backing helper install
+
+Installed helper checksum:
+
+```text
+76a48d9a1f887ddf48852cf92e55bf92
+```
+
+Added server-facing route:
+
+```text
+POST /api/v1/icloud/findmy/devices/debug/data-source
+```
+
+This route calls helper action:
+
+```text
+debug-findmy-devices-data-source
+```
+
+Reasoning:
+
+- The retained/new `FMIPManager` path is unsafe.
+- The active Devices UI is present and backed by `FindMy.FMDevicesListDataSource`.
+- The provider-runtime graph did not expose an app-owned FMIP manager/data-manager path.
+- The next lower-level lead is therefore the active Devices data source, its delegate/list controller, table view, and visible cell view models.
+
+Safety boundaries:
+
+- Does not create `FMIPManager`.
+- Does not call `FMIPManager.devices`.
+- Does not touch `FMIPManager.dataManager`.
+- Does not swizzle FMIPCore callbacks.
+
+Expected interpretation:
+
+- Readable data-source KVC fields may expose device arrays, view models, snapshots, or providers.
+- Swift ivar metadata may expose field names even when Objective-C cannot read the values directly.
+- If the route crashes, the next version should remove KVC reads and keep metadata only.
