@@ -6,9 +6,14 @@ import { Server } from "@server";
 import { isEmpty, isNotEmpty } from "@server/helpers/utils";
 import { Config, Alert, Device, Queue, Webhook, Contact, ContactAddress, ScheduledMessage } from "./entity";
 import { DEFAULT_DB_ITEMS } from "./constants";
+import {
+    DEFAULT_WEBHOOK_SECURITY_OPTIONS,
+    WebhookSecurityOptions
+} from "@server/services/webhookService/addressGuard";
 import { ContactTables1654432080899 } from "./migrations/1654432080899-ContactTables";
 import { ScheduledMessageTable1665083072000 } from "./migrations/1665083072000-ScheduledMessageTable";
 import { AddExternalIdToContacts1750299580000 } from "./migrations/1750299580000-AddExternalIdToContacts";
+import { WebhookSecurityOptions1792972800000 } from "./migrations/1792972800000-WebhookSecurityOptions";
 
 export type ServerConfig = { [key: string]: Date | string | boolean | number };
 export type ServerConfigChange = { prevConfig: ServerConfig; nextConfig: ServerConfig };
@@ -48,7 +53,8 @@ export class ServerRepository extends EventEmitter {
             migrations: [
                 ContactTables1654432080899,
                 ScheduledMessageTable1665083072000,
-                AddExternalIdToContacts1750299580000
+                AddExternalIdToContacts1750299580000,
+                WebhookSecurityOptions1792972800000
             ],
             migrationsRun: !shouldSync,
             migrationsTableName: "migrations",
@@ -210,25 +216,41 @@ export class ServerRepository extends EventEmitter {
         return await repo.find({ select: fields, relations: ["addresses"] });
     }
 
-    public async addWebhook(url: string, events: Array<{ label: string; value: string }>): Promise<Webhook> {
+    public async addWebhook(
+        url: string,
+        events: Array<{ label: string; value: string }>,
+        options: Partial<WebhookSecurityOptions> = {}
+    ): Promise<Webhook> {
         const repo = this.webhooks();
         const item = await repo.findOneBy({ url });
 
         // If the webhook exists, don't re-add it, just return it
         if (item) return item;
 
-        const webhook = repo.create({ url, events: JSON.stringify(events.map(e => e.value)) });
+        // Only the known options, and only as booleans, so a caller can't override the URL or events
+        const security = { ...DEFAULT_WEBHOOK_SECURITY_OPTIONS };
+        for (const key of Object.keys(DEFAULT_WEBHOOK_SECURITY_OPTIONS) as Array<keyof WebhookSecurityOptions>) {
+            if (typeof options?.[key] === "boolean") security[key] = options[key];
+        }
+
+        const webhook = repo.create({
+            url,
+            events: JSON.stringify(events.map(e => e.value)),
+            ...security
+        });
         return await repo.save(webhook);
     }
 
     public async updateWebhook({
         id,
         url = null,
-        events = null
+        events = null,
+        options = {}
     }: {
         id: number;
         url: string;
         events: Array<{ label: string; value: string }>;
+        options?: Partial<WebhookSecurityOptions>;
     }): Promise<Webhook> {
         const repo = this.webhooks();
         const item = await repo.findOneBy({ id });
@@ -236,6 +258,9 @@ export class ServerRepository extends EventEmitter {
 
         if (url) item.url = url;
         if (events) item.events = JSON.stringify(events.map(e => e.value));
+        for (const key of Object.keys(DEFAULT_WEBHOOK_SECURITY_OPTIONS) as Array<keyof WebhookSecurityOptions>) {
+            if (typeof options[key] === "boolean") item[key] = options[key];
+        }
 
         await repo.update(id, item);
         return item;

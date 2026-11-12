@@ -9,8 +9,15 @@ import { isMinBigSur, isMinVentura } from "@server/env";
 const osVersion = macosVersion();
 
 const buildServiceScript = (inputService: string) => {
+    // On macOS 11+ the service is an unquoted enum constant (iMessage, SMS), so it
+    // must be one of the known services or it becomes AppleScript code
+    const knownService = ["iMessage", "SMS", "RCS"].find(s => s.toLowerCase() === String(inputService).toLowerCase());
+    if (!knownService) {
+        throw new Error(`Invalid service: ${inputService}`);
+    }
+
     // Wrap the service in quotes if we are on < macOS 11 and it's not iMessage
-    let theService = inputService;
+    let theService = knownService;
     if (!isMinBigSur && theService !== "iMessage") {
         theService = `"${theService}"`;
     }
@@ -64,6 +71,10 @@ const getServiceFromInput = (value: string) => {
     // so we should default to iMessage
     if (valSplit.length <= 1) return "iMessage";
 
+    // macOS 26+ replaced the service prefix with the literal "any", which isn't a
+    // service AppleScript knows. The fallback only handles DMs, so assume iMessage.
+    if (valSplit[0].toLowerCase() === "any") return "iMessage";
+
     // Otherwise, return the "first" index in the array,
     return valSplit[0];
 };
@@ -96,7 +107,7 @@ export const requestFindMyAutomation = () => {
  * The AppleScript used to hide an app
  */
 export const hideApp = (appName: string) => {
-    return `tell application "System Events" to tell application process "${appName}"
+    return `tell application "System Events" to tell application process "${escapeOsaExp(appName)}"
         set visible to false
     end tell`;
 };
@@ -105,7 +116,7 @@ export const hideApp = (appName: string) => {
  * The AppleScript used to quit an app
  */
 export const quitApp = (appName: string) => {
-    return `tell application "${appName}"
+    return `tell application "${escapeOsaExp(appName)}"
         quit
     end tell`;
 };
@@ -114,7 +125,7 @@ export const quitApp = (appName: string) => {
  * The AppleScript used to show an app
  */
 export const showApp = (appName: string) => {
-    return `tell application "System Events" to tell application process "${appName}"
+    return `tell application "System Events" to tell application process "${escapeOsaExp(appName)}"
         set frontmost to true
     end tell`;
 };
@@ -153,7 +164,7 @@ export const hideFindMyFriends = () => {
  * The AppleScript used to start an application
  */
 export const startApp = (appName: string) => {
-    return `set appName to "${appName}"
+    return `set appName to "${escapeOsaExp(appName)}"
         if application appName is running then
             return 0
         else
@@ -165,7 +176,7 @@ export const startApp = (appName: string) => {
  * The AppleScript used to stop an application
  */
 export const stopApp = (appName: string) => {
-    return `set appName to "${appName}"
+    return `set appName to "${escapeOsaExp(appName)}"
         if application appName is running then
             tell application appName to quit
         else
@@ -198,7 +209,7 @@ export const sendMessage = (chatGuid: string, message: string, attachment: strin
 
     // Return the script
     return `tell application "Messages"
-        set targetChat to a reference to chat id "${chatGuid}"
+        set targetChat to a reference to chat id "${escapeOsaExp(chatGuid)}"
 
         ${attachmentScpt}
         ${messageScpt}
@@ -226,7 +237,7 @@ export const sendMessageFallback = (chatGuid: string, message: string, attachmen
     const serviceScript = buildServiceScript(service);
     return `tell application "Messages"
         ${serviceScript}
-        set targetBuddy to ${participant} "${address}" of targetService
+        set targetBuddy to ${participant} "${escapeOsaExp(address)}" of targetService
         
         ${attachmentScpt}
         ${messageScpt}
@@ -248,7 +259,7 @@ export const restartMessages = (delaySeconds = 3) => {
  * The AppleScript used to start a chat with some number of participants
  */
 export const startChat = (participants: string[], service: string, message: string = null) => {
-    const formatted = participants.map(buddy => `buddy "${buddy}" of targetService`);
+    const formatted = participants.map(buddy => `buddy "${escapeOsaExp(buddy)}" of targetService`);
     const buddies = formatted.join(", ");
 
     const messageScpt = buildMessageScript(message, "thisChat");
@@ -278,7 +289,7 @@ export const sendAttachmentAccessibility = (attachmentPath: string, participants
     for (const i of participants) {
         recipientCommands.push(`
             delay 2
-            keystroke "${i}"
+            keystroke "${escapeOsaExp(i)}"
             delay 1
             key code 125
             delay 1
@@ -286,7 +297,7 @@ export const sendAttachmentAccessibility = (attachmentPath: string, participants
     }
 
     // The AppleScript copy _only_ works on Monterey
-    const scriptCopy = `tell application "System Events" to set theFile to POSIX file "${attachmentPath}"`;
+    const scriptCopy = `tell application "System Events" to set theFile to POSIX file "${escapeOsaExp(attachmentPath)}"`;
     const scriptClip = `set the clipboard to theFile`;
 
     // The CMD + A & Delete will clear any existing text or attachments
@@ -346,7 +357,7 @@ export const openChat = (name: string) => {
                     set chatName to item 1 of nameSplit
                     
                     (* Only pull out groups *)
-                    if chatName is equal to "${name}" then
+                    if chatName is equal to "${escapeOsaExp(name)}" then
                         set groupMatch to chatRow
                         exit repeat
                     end if
@@ -418,7 +429,7 @@ export const renameGroupChat = (currentName: string, newName: string) => {
                     set chatName to item 1 of nameSplit
                     
                     (* Only pull out groups *)
-                    if chatName is equal to "${currentName}" then
+                    if chatName is equal to "${escapeOsaExp(currentName)}" then
                         set groupMatch to chatRow
                         exit repeat
                     end if
@@ -450,7 +461,7 @@ export const renameGroupChat = (currentName: string, newName: string) => {
                     end try
 
                     tell pop over 1 to tell scroll area 1 to tell text field 1
-                        set value to "${newName}"
+                        set value to "${escapeOsaExp(newName)}"
                         confirm
                     end tell
                     click
@@ -511,7 +522,7 @@ export const addParticipant = (currentName: string, participant: string) => {
                     set chatName to item 1 of nameSplit
                     
                     (* Only pull out groups *)
-                    if chatName is equal to "${currentName}" then
+                    if chatName is equal to "${escapeOsaExp(currentName)}" then
                         set groupMatch to chatRow
                         exit repeat
                     end if
@@ -541,7 +552,7 @@ export const addParticipant = (currentName: string, participant: string) => {
                     end try
 
                     tell pop over 1 to tell scroll area 1 to tell text field 2
-                        set value to "${participant}"
+                        set value to "${escapeOsaExp(participant)}"
                         set focused to true
                         key code 36 -- Enter
                     end tell
@@ -620,7 +631,7 @@ export const removeParticipant = (currentName: string, address: string) => {
                     set chatName to item 1 of nameSplit
                     
                     (* Only pull out groups *)
-                    if chatName is equal to "${currentName}" then
+                    if chatName is equal to "${escapeOsaExp(currentName)}" then
                         set groupMatch to chatRow
                         exit repeat
                     end if
@@ -653,7 +664,7 @@ export const removeParticipant = (currentName: string, address: string) => {
                         set contactRow to -1
                         repeat with participant in (table 1's entire contents) as list
                             if participant's class is row then
-                                if name of participant's UI element 1 is equal to "${address}" then
+                                if name of participant's UI element 1 is equal to "${escapeOsaExp(address)}" then
                                     set contactRow to participant
                                     exit repeat
                                 end if
@@ -719,7 +730,7 @@ export const toggleTapback = (chatName: string, messageText: string, reactionInd
                     set chatName to item 1 of nameSplit
                     
                     (* Only pull out groups *)
-                    if chatName is equal to "${chatName}" then
+                    if chatName is equal to "${escapeOsaExp(chatName)}" then
                         set groupMatch to chatRow
                         exit repeat
                     end if
@@ -754,7 +765,7 @@ export const toggleTapback = (chatName: string, messageText: string, reactionInd
                         set textValue to chatRow's value
                         log textValue
                         (* Compare the text with what we are looking for *)
-                        if textValue is equal to "${messageText}" then
+                        if textValue is equal to "${escapeOsaExp(messageText)}" then
                             select chatRow
                             tell previousRow to perform action "AXShowMenu"
                             delay 0.5
@@ -768,7 +779,7 @@ export const toggleTapback = (chatName: string, messageText: string, reactionInd
                             if tapBack's class is not radio group then
                                 set tapBack to item (n - 1) of newRows
                             end if
-                            tell radio button (${reactionIndex} as number) of tapBack to perform action "AXPress"
+                            tell radio button (${Number(reactionIndex)} as number) of tapBack to perform action "AXPress"
                             delay 0.5
                             keystroke return
                             
@@ -809,7 +820,7 @@ export const checkTypingIndicator = (chatName: string) => {
                     set chatName to item 1 of nameSplit
                     
                     (* Only pull out groups *)
-                    if chatName is equal to "${chatName}" then
+                    if chatName is equal to "${escapeOsaExp(chatName)}" then
                         set groupMatch to chatRow
                         exit repeat
                     end if
@@ -858,7 +869,7 @@ export const exportContacts = () => {
     // If the OS Version is earlier than or equal to 10.7.0, use "Address Book"
     if (osVersion && CompareVersions(osVersion, "10.7.0") <= 0) contactsApp = "Address Book";
 
-    return `set contactsPath to POSIX file "${FileSystem.contactsDir}/AddressBook.vcf" as string
+    return `set contactsPath to POSIX file "${escapeOsaExp(`${FileSystem.contactsDir}/AddressBook.vcf`)}" as string
         tell application "${contactsApp}"
             quit
             delay 1.0
@@ -899,8 +910,7 @@ export const openSystemPreferences = () => {
 };
 
 export const openFilePath = (filePath: string) => {
-    filePath = filePath.replace(/ /g, "\\ ");
-    return `do shell script "open ${escapeOsaExp(filePath)}"`;
+    return `do shell script "open " & quoted form of "${escapeOsaExp(filePath)}"`;
 };
 
 export const openLogs = () => {
