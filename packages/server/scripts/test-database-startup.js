@@ -23,5 +23,5 @@ const migrations=fs.readdirSync(path.join(root,'server/databases/server/migratio
  const names=(await db.query('pragma table_info(webhook)')).map(r=>r.name);
  for(const c of ['block_private_addresses','require_https','follow_redirects'])assert(names.includes(c));
  assert((await db.query('pragma table_info(contact)')).some(r=>r.name==='external_id'));
- await db.destroy();console.log('PASS: copied configuration database startup, entity metadata and migration schema');
+ await db.destroy();for(const name of fs.readdirSync(tmp))fs.unlinkSync(path.join(tmp,name));fs.rmdirSync(tmp);console.log('PASS: copied configuration database startup, entity metadata and migration schema');
 })().catch(err=>{console.error(err.message);process.exitCode=1;});

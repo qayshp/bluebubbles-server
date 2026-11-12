@@ -9,11 +9,11 @@ APP="$HOME/Applications/BlueBubbles-Custom.app"
 OUT="$ROOT/packages/server/releases/custom-local/mac/BlueBubbles.app"
 case "$MODE" in run|--verify|--logs|--telemetry|--debug|--build-only|--install-only) ;; *) echo 'Usage: build_and_run.sh [--verify|--logs|--telemetry|--debug|--build-only|--install-only]' >&2; exit 2;; esac
 if [ "$MODE" != '--install-only' ]; then
-    npm run test:findmy --workspace=@bluebubbles/server
-    node packages/server/scripts/test-attachment-hydration.js
+    npm run test:custom --workspace=@bluebubbles/server
     npm run build-ui
     npm run build --workspace=@bluebubbles/server
     (cd packages/server && CSC_IDENTITY_AUTO_DISCOVERY=false ../../node_modules/.bin/electron-builder --mac --x64 --dir --publish never --config scripts/electron-builder-config.js --config.npmRebuild=false --config.mac.notarize=false --config.directories.output=releases/custom-local)
+    ELECTRON_RUN_AS_NODE=1 "$OUT/Contents/MacOS/BlueBubbles" packages/server/scripts/test-database-startup.js
     python3 - "$ROOT" "$OUT" <<'PY'
 import datetime,hashlib,json,subprocess,sys
 from pathlib import Path
@@ -34,7 +34,13 @@ for pid in pids:os.kill(pid,signal.SIGTERM)
 for _ in range(30):
  if not any(subprocess.run(['/bin/kill','-0',str(p)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode==0 for p in pids):break
  time.sleep(1)
-else:raise SystemExit('Server did not stop; installation cancelled')
+else:
+ for pid in pids:
+  info=subprocess.run(['/bin/ps','-p',str(pid),'-o','uid=,comm='],text=True,capture_output=True).stdout.strip().split(None,1)
+  if len(info)==2 and int(info[0])==os.getuid() and info[1].endswith('/Contents/MacOS/BlueBubbles'):
+   print('Graceful shutdown exceeded 30 seconds; terminating owned Server PID',pid)
+   os.kill(pid,signal.SIGKILL)
+ time.sleep(1)
 stamp=datetime.datetime.now().strftime('%Y%m%d-%H%M%S');backup=Path.home()/'BlueBubbles-backups'/stamp;backup.mkdir(parents=True,exist_ok=True)
 source=sqlite3.connect('file:'+str(Path.home()/'Library/Application Support/bluebubbles-server/config.db')+'?mode=ro',uri=True);target=sqlite3.connect(str(backup/'config.db'));source.backup(target);source.close();target.close()
 if app.exists():app.rename(backup/'BlueBubbles-Custom.app')

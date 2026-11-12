@@ -57,6 +57,6 @@ def main():
     marker=Path.home()/'Applications/BlueBubbles-Custom.app/Contents/Resources/custom-build.json'
     if marker.exists():out['build']=json.loads(marker.read_text())
     print(json.dumps(out,indent=2))
-    unhealthy=(out.get('server_http')!=200 or len(servers)!=1 or out.get('bridge_connections',0)==0 or 'coverage' not in out or any(v['missing'] for v in out.get('coverage',{}).values()) or not out.get('findmy',{}).get('helperConnected',False))
+    unhealthy=(out.get('server_http')!=200 or len(servers)!=1 or out.get('bridge_connections',0)==0 or 'coverage' not in out or any(v['missing'] for v in out.get('coverage',{}).values()) or not (out.get('findmy') or {}).get('helperConnected',False))
     return 1 if args.strict and unhealthy else 0
 if __name__=='__main__':raise SystemExit(main())

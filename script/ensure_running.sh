@@ -7,9 +7,9 @@ if ! /bin/ps -U "$(id -u)" -o comm= | /usr/bin/grep -Fqx "$APP/Contents/MacOS/Bl
 fi
 ready=0
 for attempt in {1..60}; do
-    if /usr/bin/curl -fsS --max-time 2 http://127.0.0.1:1234/ -o /dev/null; then ready=1; break; fi
+    if /usr/bin/curl -fsS --max-time 2 http://127.0.0.1:1234/ -o /dev/null 2>/dev/null; then ready=1; break; fi
     sleep 1
 done
 if [ "$ready" != 1 ]; then echo 'Custom Server did not become ready' >&2; exit 1; fi
-/usr/bin/launchctl kickstart -k "gui/$(id -u)/com.beeper.bbctl.sh-imessage"
+/bin/launchctl kickstart -k "gui/$(id -u)/com.beeper.bbctl.sh-imessage"
 echo 'Custom Server ready; bridge catch-up started'
