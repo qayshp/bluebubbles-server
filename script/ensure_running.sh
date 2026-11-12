@@ -2,6 +2,11 @@
 set -euo pipefail
 APP="$HOME/Applications/BlueBubbles-Custom.app"
 # Verify the configured user-local executable, rather than another user's instance.
+SERVERS="$(/bin/ps -U "$(id -u)" -o comm= | /usr/bin/grep '/Contents/MacOS/BlueBubbles$' || true)"
+if [ -n "$SERVERS" ] && [ "$SERVERS" != "$APP/Contents/MacOS/BlueBubbles" ]; then
+    echo 'Another or multiple BlueBubbles Server processes exist in this account; refusing a duplicate launch' >&2
+    exit 1
+fi
 if ! /bin/ps -U "$(id -u)" -o comm= | /usr/bin/grep -Fqx "$APP/Contents/MacOS/BlueBubbles"; then
     /usr/bin/open -n "$APP" --args --disable-gpu --relaunch
 fi
