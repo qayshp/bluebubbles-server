@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { app, BrowserWindow, dialog, MessageBoxOptions, Notification, shell } from "electron";
 import { autoUpdater } from "electron-updater";
 import * as semver from "semver";
@@ -28,6 +30,8 @@ export class UpdateService extends Loggable {
     timer: ScheduledService;
 
     currentVersion: string;
+
+    private readonly customBuild = fs.existsSync(path.join(process.resourcesPath, "custom-build.json"));
 
     isOpen: boolean;
 
@@ -143,6 +147,11 @@ export class UpdateService extends Loggable {
      * Releases without update metadata can't be installed in place, so their release page is opened instead.
      */
     async installUpdate(): Promise<void> {
+        if (this.customBuild) {
+            this.log.info("This custom build must be updated through its local build/install workflow");
+            await shell.openExternal(RELEASES_URL);
+            return;
+        }
         if (!this.hasUpdate || !this.updateInfo) {
             this.log.debug("No update available to install!");
             return;
@@ -178,6 +187,10 @@ export class UpdateService extends Loggable {
      * or the release doesn't have one (every release before v1.9.10).
      */
     private async checkWithUpdater(): Promise<AvailableUpdate> {
+        if (this.customBuild || !fs.existsSync(path.join(process.resourcesPath, "app-update.yml"))) {
+            this.log.debug("Using GitHub release checks for this local build");
+            return null;
+        }
         try {
             const res = await autoUpdater.checkForUpdates();
             if (!res?.updateInfo) return null;

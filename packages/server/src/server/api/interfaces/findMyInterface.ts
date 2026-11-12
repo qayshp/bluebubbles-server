@@ -167,10 +167,13 @@ export class FindMyInterface {
         return Server().privateApi.hasClient(processIdentifier);
     }
 
-    static async refreshFriends(allowFindMyAppFallback = true): Promise<FindMyFriendLocation[]> {
+    static async refreshFriends(allowFindMyAppFallback = true, requireFreshResult = false): Promise<FindMyFriendLocation[]> {
         const privateApiEnabled = Boolean(Server().repo.getConfig("enable_private_api"));
         const privateApiTarget = resolveFindMyFriendsPrivateApiTarget({ isMinBigSur, isMinSonoma, isMinSequoia });
-        const privateApiHelperAvailable = privateApiTarget != null && Server().privateApi.hasClient(privateApiTarget);
+        let privateApiHelperAvailable = privateApiTarget != null && Server().privateApi.hasClient(privateApiTarget);
+        if (requireFreshResult && isMinSequoia && privateApiEnabled && privateApiTarget && !privateApiHelperAvailable) {
+            privateApiHelperAvailable = await this.waitForPrivateApiClient(privateApiTarget);
+        }
         let receivedUsableHelperResponse = false;
         if (privateApiEnabled && privateApiTarget != null && privateApiHelperAvailable) {
             try {
@@ -210,6 +213,12 @@ export class FindMyInterface {
                     `Unable to refresh Find My Friends through the helper: ${error?.message ?? String(error)}`
                 );
             }
+        }
+
+        if (requireFreshResult && isMinSequoia && !receivedUsableHelperResponse) {
+            throw new Error(privateApiHelperAvailable
+                ? "Find My Friends helper did not return a usable fresh response; cached data was retained"
+                : "Find My Friends helper is not connected. The injected library must load in Find My before refresh can succeed");
         }
 
         const shouldRefreshUsingFindMyApp = allowFindMyAppFallback && (!receivedUsableHelperResponse || !isMinSequoia);

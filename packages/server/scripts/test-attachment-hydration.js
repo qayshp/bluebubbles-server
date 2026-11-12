@@ -1,0 +1,25 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const ts = require('typescript');
+const path = require('node:path');
+const filename = path.resolve(__dirname, '../src/server/databases/imessage/index.ts');
+const compiled = ts.transpileModule(fs.readFileSync(filename,'utf8'), {compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText;
+const mod = {exports:{}};
+new Function('require','module','exports',compiled)(name => name.endsWith('/Loggable') ? {Loggable:class{}} : {},mod,mod.exports);
+const repo = Object.create(mod.exports.MessageRepository.prototype);
+const guid='12345678-1234-1234-1234-123456789ABC';
+const body = {attributedBody:[{runs:[{attributes:{__kIMFileTransferGUIDAttributeName:guid}},{attributes:{__kIMFileTransferGUIDAttributeName:guid}}]}]};
+(async()=>{
+ let queries=0;
+ repo.getAttachment=async()=>{queries++;return {ROWID:42,guid:guid.toLowerCase()};};
+ const a={...body,attachments:[]};const b={...body,attachments:[]};
+ await repo.addMissingAttachmentsFromAttributedBody([a,b]);
+ assert.equal(queries,1,'repeated attributed references use one lookup');
+ assert.equal(a.attachments.length,1);assert.equal(b.attachments.length,1);
+ await repo.addMissingAttachmentsFromAttributedBody([a,b]);
+ assert.equal(queries,1,'rehydration does not duplicate or refetch existing attachments');
+ const original={...body,attachments:[{ROWID:42,guid:'different',originalGuid:'prefix-'+guid.toLowerCase()}]};
+ await repo.addMissingAttachmentsFromAttributedBody([original]);assert.equal(original.attachments.length,1);
+ repo.getAttachment=async()=>null;const absent={...body};await repo.addMissingAttachmentsFromAttributedBody([absent]);assert.deepEqual(absent.attachments,[]);
+ console.log('PASS: attachment hydration and duplicate prevention');
+})().catch(err=>{console.error(err);process.exitCode=1;});

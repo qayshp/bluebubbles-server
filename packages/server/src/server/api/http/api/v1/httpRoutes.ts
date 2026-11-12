@@ -117,6 +117,11 @@ export class HttpRoutes {
                     },
                     {
                         method: HttpMethod.GET,
+                        path: "findmy/status",
+                        controller: FindMyRouter.status
+                    },
+                    {
+                        method: HttpMethod.GET,
                         path: "findmy/devices",
                         controller: FindMyRouter.devices
                     },

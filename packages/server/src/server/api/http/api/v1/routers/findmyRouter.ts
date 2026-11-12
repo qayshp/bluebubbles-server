@@ -1,3 +1,4 @@
+import { isMinSequoia } from "@server/env";
 import { Next } from "koa";
 import { RouterContext } from "koa-router";
 import { Success } from "../responses/success";
@@ -8,6 +9,16 @@ import { NEW_FINDMY_LOCATION } from "@server/events";
 import { Server } from "@server";
 
 export class FindMyRouter {
+    static async status(ctx: RouterContext, _: Next) {
+        return new Success(ctx, { message: "Find My helper status", data: {
+            privateApiEnabled: Boolean(Server().repo.getConfig("enable_private_api")),
+            helperRequired: isMinSequoia,
+            helperConnected: Server().privateApi.hasClient("com.apple.findmy"),
+            cachedFriends: Server().findMyFriendsCache.getAll().length,
+            cachedDevices: Server().findMyDevicesCache.getAll().length
+        } }).send();
+    }
+
     static async emitFriendLocationUpdates(friendLocations: FindMyFriendLocation[]) {
         if (!Array.isArray(friendLocations)) return;
         for (const friendLocation of friendLocations) {
@@ -36,7 +47,7 @@ export class FindMyRouter {
 
     static async refreshFriends(ctx: RouterContext, _: Next) {
         try {
-            const friendLocations = await FindMyInterface.refreshFriends();
+            const friendLocations = await FindMyInterface.refreshFriends(true, true);
             await FindMyRouter.emitFriendLocationUpdates(friendLocations);
             return new Success(ctx, {
                 message: "Successfully refreshed Find My friends locations!",

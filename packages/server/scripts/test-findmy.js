@@ -462,6 +462,8 @@ const runFindMyDylibPluginTests = async () => {
 
 const runRefreshBranchTests = async () => {
     let observations = createRefreshScenario({ helperAvailable: false });
+    await assert.rejects(() => FindMyInterface.refreshFriends(true, true), /helper is not connected/);
+    assert.equal(observations.fallbackCalls, 0, "failed strict refresh must not restart Find My or report cache as fresh");
     let locations = await FindMyInterface.refreshFriends();
     await settleBackgroundFallback();
     assert.equal(observations.helperCalls, 0);
