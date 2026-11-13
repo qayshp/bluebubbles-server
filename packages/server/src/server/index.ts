@@ -38,7 +38,7 @@ import { runTerminalScript, openSystemPreferences, startMessages } from "@server
 
 import { ActionHandler } from "./api/apple/actions";
 import { insertChatParticipants, isEmpty, isNotEmpty, waitMs } from "./helpers/utils";
-import { isMinBigSur, isMinCatalina, isMinHighSierra, isMinMojave, isMinMonterey } from "./env";
+import { isMinBigSur, isMinCatalina, isMinHighSierra, isMinMojave, isMinMonterey, isMinSequoia } from "./env";
 import { Proxy } from "./services/proxyServices/proxy";
 import { PrivateApiService } from "./api/privateApi/PrivateApiService";
 import { OutgoingMessageManager } from "./managers/outgoingMessageManager";
@@ -1255,6 +1255,16 @@ class BlueBubblesServer extends EventEmitter {
                 `Follow our documentation on how to disable SIP: ` +
                 `https://docs.bluebubbles.app/private-api/installation`
         });
+
+        if (isMinSequoia && this.repo.getConfig("open_findmy_on_startup")) {
+            output.push({
+                name: "Find My Library Validation Setting",
+                pass: await FileSystem.isLibraryValidationDisabled(),
+                solution:
+                    "Find My helper injection requires the Library Validation step in the Private API setup guide. " +
+                    "This is a system-wide setting: https://docs.bluebubbles.app/private-api/installation"
+            });
+        }
 
         return output;
     }

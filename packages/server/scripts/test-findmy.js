@@ -31,6 +31,23 @@ const { normalizeFindMyDevice, normalizeFindMyDevices, normalizeFindMyFriendLoca
 const { JsonLineBuffer } = loadTypeScriptModule("../src/server/api/privateApi/JsonLineBuffer.ts");
 const { selectPrivateApiClients } = loadTypeScriptModule("../src/server/api/privateApi/PrivateApiClientSelector.ts");
 const findMyPrivateApiSupport = loadTypeScriptModule("../src/server/api/lib/findmy/privateApiSupport.ts");
+const { isSipExplicitlyDisabled, isLibraryValidationDisabled } = loadTypeScriptModule("../src/server/api/privateApi/requirements.ts");
+assert.equal(isSipExplicitlyDisabled("System Integrity Protection status: disabled.\n"), true);
+assert.equal(isSipExplicitlyDisabled("System Integrity Protection status: enabled.\n"), false);
+assert.equal(isSipExplicitlyDisabled(`System Integrity Protection status: unknown (Custom Configuration).
+\nConfiguration:
+    Filesystem Protections: disabled
+    Debugging Restrictions: enabled
+    DTrace Restrictions: enabled
+\nThis is an unsupported configuration, likely to break in the future.`), false,
+"a partial SIP configuration must not be reported as fully disabled");
+for (const status of ["", null, "csrutil: failed to query configuration"]) {
+    assert.equal(isSipExplicitlyDisabled(status), false);
+}
+assert.equal(isLibraryValidationDisabled("1\n"), true);
+for (const status of ["0", "", null, "The domain/default pair does not exist", "11"]) {
+    assert.equal(isLibraryValidationDisabled(status), false);
+}
 const {
     FIND_MY_PROCESS_IDENTIFIER,
     MESSAGES_PROCESS_IDENTIFIER,

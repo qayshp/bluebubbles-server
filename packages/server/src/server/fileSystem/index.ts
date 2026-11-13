@@ -28,6 +28,7 @@ import {
     ImageMetadataKeys
 } from "./types";
 import { v4 as uuidv4 } from "uuid";
+import { isLibraryValidationDisabled, isSipExplicitlyDisabled } from "@server/api/privateApi/requirements";
 
 const FindProcess = require("find-process");
 const { rimrafSync } = require("rimraf");
@@ -830,8 +831,25 @@ export class FileSystem {
     }
 
     static async isSipDisabled(): Promise<boolean> {
-        const res = ((await FileSystem.execShellCommand(`csrutil status`)) ?? "").trim();
-        return !res.endsWith("enabled.");
+        try {
+            return isSipExplicitlyDisabled(await FileSystem.execFileCommand("/usr/bin/csrutil", ["status"]));
+        } catch (_) {
+            return false;
+        }
+    }
+
+    static async isLibraryValidationDisabled(): Promise<boolean> {
+        try {
+            const status = await FileSystem.execFileCommand("/usr/bin/defaults", [
+                "read",
+                "/Library/Preferences/com.apple.security.libraryvalidation",
+                "DisableLibraryValidation"
+            ]);
+            return isLibraryValidationDisabled(status);
+        } catch (_) {
+            // An absent preference leaves library validation enabled.
+            return false;
+        }
     }
 
     static async hasFullDiskAccess(): Promise<boolean> {
