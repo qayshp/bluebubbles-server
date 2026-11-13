@@ -524,9 +524,14 @@ const testRegisteredCachedFriendsRoute = async () => {
     const errors = load("../src/server/api/http/api/v1/responses/errors.ts", { "./types": types });
     const cachedFriends = [{ handle: "cached@example.test" }];
     const server = { repo: { getConfig: () => "test-password" }, log() {} };
+    const passwordAuth = load("../src/server/api/http/passwordAuth.ts", { "@server": { Server: () => server } });
+    const authThrottle = load("../src/server/api/http/authThrottle.ts");
+    const throttle = new authThrottle.AuthThrottle();
+    server.httpService = { authThrottle: throttle, recordAuthFailure: (...args) => throttle.recordFailure(...args) };
     const { AuthMiddleware } = load("../src/server/api/http/api/v1/middleware/authMiddleware.ts", {
         "@server": { Server: () => server },
-        "@server/helpers/utils": { safeTrim: value => value.trim() },
+        "@server/api/http/passwordAuth": passwordAuth,
+        "@server/api/http/authThrottle": authThrottle,
         "../responses/errors": errors
     });
     let helperChecks = 0;
@@ -561,13 +566,14 @@ const testRegisteredCachedFriendsRoute = async () => {
         "../../types": load("../src/server/api/http/types.ts"),
         "@server/lib/logging/Loggable": { getLogger: () => ({ debug() {} }) }
     };
-    for (const name of ["MetricsMiddleware", "ErrorMiddleware", "LogMiddleware"]) {
+    for (const name of ["MetricsMiddleware", "ErrorMiddleware", "LogMiddleware", "BodyMiddleware"]) {
         mocks[`./middleware/${name[0].toLowerCase()}${name.slice(1)}`] = { [name]: passThrough };
     }
     const source = fs.readFileSync(path.resolve(__dirname, "../src/server/api/http/api/v1/httpRoutes.ts"), "utf8");
     for (const [, name, modulePath] of source.matchAll(/import \{ (\w+) \} from "(\.\/(?:routers|validators)\/[^\"]+)";/g)) {
         mocks[modulePath] = { [name]: new Proxy({}, { get: () => passThrough }) };
     }
+    mocks["./middleware/chatGuidMiddleware"] = { ChatGuidMiddleware: () => passThrough };
     mocks["./routers/findmyRouter"] = { FindMyRouter };
     const { HttpRoutes } = load("../src/server/api/http/api/v1/httpRoutes.ts", mocks);
     const KoaRouter = require("koa-router");
@@ -577,7 +583,8 @@ const testRegisteredCachedFriendsRoute = async () => {
     const context = password => ({
         method: "GET", path: "/api/v1/icloud/findmy/friends",
         request: { query: password == null ? {} : { password }, ip: "test" },
-        req: { setTimeout() {} }, res: { setTimeout() {} }
+        req: { setTimeout() {}, socket: { remoteAddress: "192.0.2.1" } }, res: { setTimeout() {} },
+        get() { return ""; }, set() {}
     });
     const authenticated = context("test-password");
     await friends(authenticated);
