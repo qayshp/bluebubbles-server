@@ -170,6 +170,74 @@ class DeploymentTests(unittest.TestCase):
 
 
 class HealthTests(unittest.TestCase):
+    @staticmethod
+    def unavailable_readonly(real_connect, failure='backup'):
+        class Source:
+            def backup(self, _target):raise sqlite3.OperationalError('unable to open database file')
+            def close(self):pass
+        def connect(filename,*args,**kwargs):
+            if kwargs.get('uri') and 'mode=ro' in str(filename):
+                if failure=='open':raise sqlite3.OperationalError('unable to open database file')
+                return Source()
+            return real_connect(filename,*args,**kwargs)
+        return connect
+
+    def test_unavailable_readonly_open_or_backup_uses_verified_private_copy(self):
+        for failure in ('open','backup'):
+            with self.subTest(failure=failure),tempfile.TemporaryDirectory() as temp:
+                live=Path(temp)/'bridge.db'
+                db=sqlite3.connect(live);db.execute('create table message(guid text)')
+                db.execute("insert into message values('fixture')");db.commit();db.close()
+                connect=sqlite3.connect
+                with patch.object(health.sqlite3,'connect',side_effect=self.unavailable_readonly(connect,failure)):
+                    snapshot,directory=health.bridge_snapshot(live)
+                self.assertEqual(snapshot.execute('select count(*) from message').fetchone()[0],1)
+                snapshot.close();directory.cleanup()
+
+    def test_fallback_retries_checkpoint_and_removed_wal_instead_of_accepting_stale_copy(self):
+        for remove_wal in (False,True):
+            with self.subTest(remove_wal=remove_wal),tempfile.TemporaryDirectory() as temp:
+                live=Path(temp)/'bridge.db';db=sqlite3.connect(live)
+                db.execute('pragma journal_mode=wal');db.execute('pragma wal_autocheckpoint=0')
+                db.execute('create table message(guid text)');db.execute("insert into message values('first')")
+                db.commit();db.execute('pragma wal_checkpoint(truncate)')
+                db.execute("insert into message values('second')");db.commit()
+                copy,connect=shutil.copy2,sqlite3.connect;copies=[]
+                def raced_copy(source,target,*args,**kwargs):
+                    result=copy(source,target,*args,**kwargs)
+                    if Path(source)==live:
+                        copies.append(source)
+                        if len(copies)==1:
+                            db.execute('pragma wal_checkpoint(truncate)')
+                            if remove_wal:db.close()
+                    return result
+                with patch.object(health.sqlite3,'connect',side_effect=self.unavailable_readonly(connect)),patch.object(shutil,'copy2',side_effect=raced_copy):
+                    snapshot,directory=health.bridge_snapshot(live)
+                self.assertGreaterEqual(len(copies),2,'a raced copy must be discarded even if quick_check would pass')
+                self.assertEqual(snapshot.execute('select count(*) from message').fetchone()[0],2)
+                snapshot.close();directory.cleanup();db.close()
+
+    def test_fallback_rejects_continuously_changing_source(self):
+        with tempfile.TemporaryDirectory() as temp:
+            live=Path(temp)/'bridge.db';db=sqlite3.connect(live)
+            db.execute('pragma journal_mode=wal');db.execute('create table message(guid text)');db.commit()
+            copy,connect=shutil.copy2,sqlite3.connect;copies=[]
+            def changed_copy(source,target,*args,**kwargs):
+                result=copy(source,target,*args,**kwargs)
+                if Path(source)==live:
+                    copies.append(source);db.execute('insert into message values(?)',(str(len(copies)),));db.commit()
+                return result
+            with patch.object(health.sqlite3,'connect',side_effect=self.unavailable_readonly(connect)),patch.object(shutil,'copy2',side_effect=changed_copy):
+                with self.assertRaisesRegex(RuntimeError,'changed during snapshot'):
+                    health.bridge_snapshot(live)
+            self.assertEqual(len(copies),3);db.close()
+
+    def test_unrelated_sqlite_errors_do_not_enable_copy_fallback(self):
+        with patch.object(health.sqlite3,'connect',side_effect=sqlite3.OperationalError('database schema is locked')),patch.object(health,'stable_database_copy') as fallback:
+            with self.assertRaisesRegex(sqlite3.OperationalError,'schema is locked'):
+                health.bridge_snapshot(Path('/synthetic/bridge.db'))
+            fallback.assert_not_called()
+
     def test_consistent_snapshot_includes_wal_even_during_checkpoint(self):
         with tempfile.TemporaryDirectory() as temp:
             live=Path(temp)/'bridge.db';db=sqlite3.connect(live)
