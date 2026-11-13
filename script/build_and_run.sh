@@ -26,7 +26,7 @@ if [ "$MODE" = '--build-only' ]; then exit 0; fi
 [ -f "$OUT/Contents/Resources/custom-build.json" ] || { echo 'Build first; custom provenance marker missing' >&2; exit 1; }
 # Build first; keep the running service available until installation is ready.
 python3 - "$APP" "$OUT" <<'PY'
-import datetime,os,shutil,signal,sqlite3,subprocess,sys,time
+import datetime,os,shutil,signal,sqlite3,subprocess,sys,time,tempfile
 from pathlib import Path
 app,out=map(Path,sys.argv[1:]);rows=subprocess.check_output(['/bin/ps','-U',str(os.getuid()),'-o','pid=,comm='],text=True)
 pids=[int(line.split(None,1)[0]) for line in rows.splitlines() if line.strip().endswith('/Contents/MacOS/BlueBubbles')]
@@ -42,7 +42,17 @@ else:
    os.kill(pid,signal.SIGKILL)
  time.sleep(1)
 stamp=datetime.datetime.now().strftime('%Y%m%d-%H%M%S');backup=Path.home()/'BlueBubbles-backups'/stamp;backup.mkdir(parents=True,exist_ok=True)
-source=sqlite3.connect('file:'+str(Path.home()/'Library/Application Support/bluebubbles-server/config.db')+'?mode=ro',uri=True);target=sqlite3.connect(str(backup/'config.db'));source.backup(target);source.close();target.close()
+config=Path.home()/'Library/Application Support/bluebubbles-server/config.db'
+# Back up a stopped database through a private copy, including any uncheckpointed WAL.
+# This also handles SQLite refusing a read-only open that needs a shared-memory file.
+with tempfile.TemporaryDirectory(prefix='sqlite-snapshot-',dir=backup) as tmp:
+ copied=Path(tmp)/'config.db'
+ for suffix in ('','-wal'):
+  original=Path(str(config)+suffix)
+  if original.exists():shutil.copy2(original,str(copied)+suffix)
+ source=sqlite3.connect(str(copied))
+ if source.execute('pragma quick_check').fetchone()[0]!='ok':raise SystemExit('Configuration snapshot integrity check failed')
+ target=sqlite3.connect(str(backup/'config.db'));source.backup(target);source.close();target.close()
 if app.exists():app.rename(backup/'BlueBubbles-Custom.app')
 app.parent.mkdir(parents=True,exist_ok=True);subprocess.run(['/usr/bin/ditto',str(out),str(app)],check=True)
 print('Previous app/database saved at',backup)
