@@ -13,8 +13,8 @@ You can also check the current versions of these bundles by opening the `version
 `BlueBubblesFindMyHelper.dylib` is built from the companion
 `bluebubbles-helper` Find My target. The server enables it on macOS 15 or later
 only when both Private API and **Open FindMy App on Startup** are enabled.
-Older supported macOS releases continue to route Friends requests through the
-Messages helper when that private API is available.
+On macOS 11 through 13, Friends requests use the Messages helper when that
+Private API is available. macOS 14 retains its existing Find My app fallback.
 
 On macOS 15 or later, the Devices GET route reads the server's latest helper
 snapshot without changing the Find My view. The explicit Devices refresh route
