@@ -1,20 +1,25 @@
 #!/usr/bin/env python3
 """Read-only Server/helper/bridge diagnostics; message contents and credentials are never printed."""
-import argparse,collections,datetime,json,os,shutil,sqlite3,subprocess,tempfile,time,urllib.request,urllib.parse
+import argparse,datetime,json,os,sqlite3,subprocess,tempfile,time,urllib.request,urllib.parse
 from pathlib import Path
 
 def bridge_snapshot(filename):
     for attempt in range(3):
         directory=tempfile.TemporaryDirectory(prefix='bluebubbles-health-')
         target=Path(directory.name)/'bridge.db'
+        source=db=None
         try:
-            for suffix in ('','-wal'):
-                source=Path(str(filename)+suffix)
-                if source.exists():shutil.copy2(source,str(target)+suffix)
+            # SQLite's backup transaction stays consistent across concurrent checkpoints.
+            # Copying the live main/WAL files separately can silently lose committed rows.
+            source=sqlite3.connect(Path(filename).resolve().as_uri()+'?mode=ro',uri=True)
             db=sqlite3.connect(str(target))
+            source.backup(db)
+            source.close();source=None
             if db.execute('pragma quick_check').fetchone()[0]!='ok':raise RuntimeError('snapshot integrity check failed')
             return db,directory
         except Exception:
+            if source is not None:source.close()
+            if db is not None:db.close()
             directory.cleanup()
             if attempt==2:raise
             time.sleep(.1)
@@ -52,11 +57,15 @@ def main():
     ps=subprocess.check_output(['/bin/ps','-U',str(os.getuid()),'-o','pid=,comm='],text=True)
     servers=[line.strip() for line in ps.splitlines() if line.strip().endswith('/Contents/MacOS/BlueBubbles')]
     out['server_processes']=servers
-    tcp=subprocess.run(['/usr/sbin/lsof','-nP','-a','-c','mautrix-imessage','-iTCP:1234'],text=True,capture_output=True)
+    tcp=subprocess.run(['/usr/sbin/lsof','-nP','-a','-u',str(os.getuid()),'-c','mautrix-imessage','-iTCP:1234'],text=True,capture_output=True)
     out['bridge_connections']=sum('ESTABLISHED' in line for line in tcp.stdout.splitlines())
     marker=Path.home()/'Applications/BlueBubbles-Custom.app/Contents/Resources/custom-build.json'
-    if marker.exists():out['build']=json.loads(marker.read_text())
+    if marker.exists():
+        build=json.loads(marker.read_text())
+        out['build']={key:build[key] for key in ('server_commit','source_dirty','built_at','server_sha256','custom_updates') if key in build}
     print(json.dumps(out,indent=2))
-    unhealthy=(out.get('server_http')!=200 or len(servers)!=1 or out.get('bridge_connections',0)==0 or 'coverage' not in out or any(v['missing'] for v in out.get('coverage',{}).values()) or not (out.get('findmy') or {}).get('helperConnected',False))
+    custom_executable=str(Path.home()/'Applications/BlueBubbles-Custom.app/Contents/MacOS/BlueBubbles')
+    correct_server=len(servers)==1 and servers[0].split(None,1)[1]==custom_executable
+    unhealthy=(out.get('server_http')!=200 or not correct_server or out.get('bridge_connections',0)==0 or 'coverage' not in out or any(v['missing'] for v in out.get('coverage',{}).values()) or not (out.get('findmy') or {}).get('helperConnected',False))
     return 1 if args.strict and unhealthy else 0
 if __name__=='__main__':raise SystemExit(main())
