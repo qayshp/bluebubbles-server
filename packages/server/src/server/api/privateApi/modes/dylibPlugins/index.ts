@@ -133,6 +133,7 @@ export abstract class DylibPlugin extends Loggable {
                         restartOnNonZeroExit: false,
                         options: {
                             env: {
+                                ...process.env,
                                 DYLD_INSERT_LIBRARIES: this.dylibPath
                             }
                         }

@@ -706,7 +706,66 @@ const runDeviceRefreshTests = async () => {
     await assert.rejects(() => FindMyInterface.refreshDevices(), /Open FindMy App on Startup/);
 };
 
-runFindMyDylibPluginTests()
+const runDylibLauncherEnvironmentTests = async () => {
+    const { EventEmitter } = require("node:events");
+    const privateApi = new EventEmitter();
+    const values = {
+        HOME: "/test-user-home",
+        USER: "launcher-test-user",
+        PATH: "/test-user-bin",
+        DYLD_INSERT_LIBRARIES: "/unrelated-inherited-library.dylib"
+    };
+    const original = Object.fromEntries(Object.keys(values).map(key => [key, process.env[key]]));
+    let captured;
+    let plugin;
+    let registrations = 0;
+    try {
+        Object.assign(process.env, values);
+        const { DylibPlugin } = loadTypeScriptModule("../src/server/api/privateApi/modes/dylibPlugins/index.ts", {
+            "@server": { Server: () => ({ privateApi }) },
+            "@server/helpers/utils": { waitMs: async () => {} },
+            "@server/fileSystem": { FileSystem: { killProcess: async () => {}, executeAppleScript: async () => {} } },
+            "@server/api/apple/scripts": { hideApp: () => "" },
+            "@server/lib/logging/Loggable": { Loggable: class { log = { debug: () => {}, warn: () => {}, error: () => {} }; } },
+            "@server/lib/ProcessSpawner": { ProcessSpawner: class {
+                constructor(options) { captured = options; }
+                async execute() {
+                    privateApi.emit("client-registered", { process: "unrelated.host" });
+                    privateApi.emit("client-registered", { process: "com.apple.findmy" });
+                    plugin.stopRequested = true;
+                }
+            } }
+        });
+        class TestPlugin extends DylibPlugin {
+            parentApp = "FindMy";
+            bundleIdentifier = "com.apple.findmy";
+            get isEnabled() { return true; }
+            get dylibPath() { return "/custom-helper.dylib"; }
+            get parentProcessPath() { return "/test/FindMy"; }
+            async afterClientRegistration() { registrations += 1; }
+        }
+        plugin = new TestPlugin("Find My Helper");
+        await plugin.injectPlugin();
+        assert(captured, "must exercise the real injection launcher");
+        for (const key of ["HOME", "USER", "PATH"]) {
+            assert.equal(captured.options.env[key], values[key], `launcher must preserve inherited ${key}`);
+        }
+        assert.equal(captured.options.env.DYLD_INSERT_LIBRARIES, "/custom-helper.dylib", "the intended helper overrides inherited injection paths");
+        assert(captured.options.env !== process.env, "child environment must not mutate process.env");
+        assert.equal(process.env.DYLD_INSERT_LIBRARIES, values.DYLD_INSERT_LIBRARIES);
+        assert.equal(registrations, 1, "only the matching helper registration initializes this plugin");
+        assert.equal(privateApi.listenerCount("client-registered"), 0, "launcher must clean up its listener");
+        assert.equal(plugin.injectionRunning, false);
+    } finally {
+        for (const [key, value] of Object.entries(original)) {
+            if (value === undefined) delete process.env[key];
+            else process.env[key] = value;
+        }
+    }
+};
+
+runDylibLauncherEnvironmentTests()
+    .then(runFindMyDylibPluginTests)
     .then(runRefreshBranchTests)
     .then(runDeviceRefreshTests)
     .then(() => console.log("PASS: Find My integration tests"))
