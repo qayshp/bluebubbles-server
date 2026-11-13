@@ -54,7 +54,7 @@ report.update(status_http=status,status=data,observations=samples,findmy_process
 for pid,ppid in [entry for entry in processes() if expected_pid is not None and entry[1]==expected_pid]:
     env=subprocess.run(['/bin/ps','eww','-p',str(pid)],text=True,capture_output=True).stdout
     flags=ctypes.c_uint32();lib=ctypes.CDLL('/usr/lib/libSystem.B.dylib',use_errno=True);rc=lib.csops(pid,0,ctypes.byref(flags),4)
-    report['findmy_processes'].append({'pid':pid,'parent_pid':ppid,'environment_keys_present':{key:bool(re.search(r'(?:^|\s)'+key+r'=',env)) for key in ['HOME','USER','PATH']},'code_signing_flags':hex(flags.value) if rc==0 else None,'requires_library_validation':bool(flags.value&0x2000) if rc==0 else None})
+    report['findmy_processes'].append({'pid':pid,'parent_pid':ppid,'environment_keys_visible_to_ps':{key:bool(re.search(r'(?:^|\s)'+key+r'=',env)) for key in ['HOME','USER','PATH']},'environment_visibility':'visible' if re.search(r'(?:^|\s)[A-Za-z_][A-Za-z0-9_]*=',env) else 'unavailable_or_empty','code_signing_flags':hex(flags.value) if rc==0 else None,'requires_library_validation':bool(flags.value&0x2000) if rc==0 else None})
 if not args.baseline:
     report['refreshes']={}
     for kind in ['friends','devices']:
