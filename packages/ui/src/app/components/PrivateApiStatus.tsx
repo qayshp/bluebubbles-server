@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from 'react';
 import {
     useBoolean,
     Box,
@@ -9,9 +9,9 @@ import {
     useColorModeValue,
     keyframes,
     Button
-} from "@chakra-ui/react";
-import { BiRefresh } from "react-icons/bi";
-import { getPrivateApiStatus, retryFindMyHelper } from "../utils/IpcUtils";
+} from '@chakra-ui/react';
+import { BiRefresh } from 'react-icons/bi';
+import { getPrivateApiStatus, retryFindMyHelper } from '../utils/IpcUtils';
 
 const spin = keyframes`
   from { transform: rotate(0deg); }
@@ -63,27 +63,27 @@ export const PrivateApiStatus = (): JSX.Element => {
             const findMy = await retryFindMyHelper();
             setStatus(previous => ({ ...previous, findMy }));
         } catch (error: any) {
-            setRetryError(error?.message ?? "Unable to start the Find My check.");
+            setRetryError(error?.message ?? 'Unable to start the Find My check.');
         } finally {
             setRetrying(false);
         }
     };
 
-    const connected = status === null ? "..." : status?.messagesConnected ?? status?.connected ?? false ? "Yes" : "No";
+    const connected = status === null ? '...' : status?.messagesConnected ?? status?.connected ?? false ? 'Yes' : 'No';
     const findMy = status?.findMy as
         | { required?: boolean; requested?: boolean; status?: string; message?: string }
         | undefined;
     const findMyLabel =
         (
-            { disabled: "Disabled", initializing: "Checking…", ready: "Ready", unavailable: "Unavailable" } as Record<
+            { disabled: 'Disabled', initializing: 'Checking…', ready: 'Ready', unavailable: 'Unavailable' } as Record<
                 string,
                 string
             >
-        )[findMy?.status ?? ""] ?? "...";
+        )[findMy?.status ?? ''] ?? '...';
     return (
         <Box
             border="1px solid"
-            borderColor={useColorModeValue("gray.200", "gray.700")}
+            borderColor={useColorModeValue('gray.200', 'gray.700')}
             borderRadius="xl"
             p={3}
             width="325px"
@@ -93,7 +93,7 @@ export const PrivateApiStatus = (): JSX.Element => {
                     Private API Status
                 </Text>
                 <Box
-                    _hover={{ cursor: "pointer" }}
+                    _hover={{ cursor: 'pointer' }}
                     animation={showProgress ? `${spin} infinite 1s linear` : undefined}
                     onClick={refreshStatus}
                 >
@@ -110,7 +110,7 @@ export const PrivateApiStatus = (): JSX.Element => {
                 <ListItem>
                     <Text fontSize="md">
                         <strong>Port</strong>:&nbsp;
-                        <Box as="span">{status?.port ?? "..."}</Box>
+                        <Box as="span">{status?.port ?? '...'}</Box>
                     </Text>
                 </ListItem>
             </UnorderedList>
@@ -119,18 +119,18 @@ export const PrivateApiStatus = (): JSX.Element => {
                     <Text>
                         <strong>Find My</strong>: {findMyLabel}
                     </Text>
-                    {findMy.status !== "ready" ? (
+                    {findMy.status !== 'ready' ? (
                         <Text mt={1} fontSize="sm">
                             {findMy.message}
                         </Text>
                     ) : null}
-                    {findMy.requested && findMy.status !== "ready" ? (
+                    {findMy.requested && findMy.status !== 'ready' ? (
                         <Button
                             mt={2}
                             size="sm"
                             onClick={retryFindMy}
                             isLoading={retrying}
-                            isDisabled={findMy.status === "initializing"}
+                            isDisabled={findMy.status === 'initializing'}
                         >
                             Retry Find My check
                         </Button>
