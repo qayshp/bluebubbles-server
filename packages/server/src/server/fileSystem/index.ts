@@ -28,7 +28,7 @@ import {
     ImageMetadataKeys
 } from "./types";
 import { v4 as uuidv4 } from "uuid";
-import { isLibraryValidationDisabled, isSipExplicitlyDisabled } from "@server/api/privateApi/requirements";
+import { isSipExplicitlyDisabled } from "@server/api/privateApi/requirements";
 
 const FindProcess = require("find-process");
 const { rimrafSync } = require("rimraf");
@@ -630,10 +630,14 @@ export class FileSystem {
     /**
      * Asynchronously executes a program with an argument list (no shell)
      */
-    static async execFileCommand(file: string, args: string[]): Promise<string> {
+    static async execFileCommand(
+        file: string,
+        args: string[],
+        options: Pick<child_process.ExecFileOptions, "signal" | "timeout"> = {}
+    ): Promise<string> {
         const { execFile } = child_process;
         return new Promise((resolve, reject) => {
-            execFile(file, args, (error, stdout, stderr) => {
+            execFile(file, args, { ...options, encoding: "utf8" }, (error, stdout, stderr) => {
                 if (error) {
                     reject(error);
                 }
@@ -643,7 +647,10 @@ export class FileSystem {
         });
     }
 
-    static async executeAppleScript(cmd: string) {
+    static async executeAppleScript(
+        cmd: string,
+        options: Pick<child_process.ExecFileOptions, "signal" | "timeout"> = {}
+    ) {
         if (isEmpty(cmd)) return null;
 
         // Each line is its own argument to osascript, never a shell string,
@@ -654,20 +661,22 @@ export class FileSystem {
             .filter(i => isNotEmpty(i))
             .flatMap(i => ["-e", i]);
 
-        return FileSystem.execFileCommand("/usr/bin/osascript", args);
+        return FileSystem.execFileCommand("/usr/bin/osascript", args, options);
     }
 
-    static async requestFindMyAutomationPermissions() {
+    static async requestFindMyAutomationPermissions(signal?: AbortSignal) {
         const requests = [
             { name: "System Events", script: requestSystemEventsAutomation() },
             { name: "Find My", script: requestFindMyAutomation() }
         ];
 
         for (const request of requests) {
+            if (signal?.aborted) throw new Error("Find My initialization was cancelled");
             try {
-                await FileSystem.executeAppleScript(request.script);
+                await FileSystem.executeAppleScript(request.script, { signal });
                 Server().logger.debug(`Requested ${request.name} Automation permission`);
             } catch (ex: any) {
+                if (signal?.aborted) throw ex;
                 Server().logger.warn(
                     `Unable to request ${request.name} Automation permission! CLI Error: ${ex?.message ?? String(ex)}`
                 );
@@ -834,20 +843,6 @@ export class FileSystem {
         try {
             return isSipExplicitlyDisabled(await FileSystem.execFileCommand("/usr/bin/csrutil", ["status"]));
         } catch (_) {
-            return false;
-        }
-    }
-
-    static async isLibraryValidationDisabled(): Promise<boolean> {
-        try {
-            const status = await FileSystem.execFileCommand("/usr/bin/defaults", [
-                "read",
-                "/Library/Preferences/com.apple.security.libraryvalidation",
-                "DisableLibraryValidation"
-            ]);
-            return isLibraryValidationDisabled(status);
-        } catch (_) {
-            // An absent preference leaves library validation enabled.
             return false;
         }
     }

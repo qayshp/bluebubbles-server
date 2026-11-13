@@ -21,9 +21,7 @@ import {
     resolveFindMyDevicesPrivateApiTarget,
     resolveFindMyFriendsPrivateApiTarget
 } from "@server/api/lib/findmy/privateApiSupport";
-
-const FIND_MY_DEVICES_HELPER_CONNECTION_TIMEOUT_MS = 10_000;
-const FIND_MY_DEVICES_HELPER_CONNECTION_POLL_MS = 100;
+import { FindMyUnavailableError } from "@server/api/privateApi/FindMyHelperReadiness";
 
 export class FindMyInterface {
     static async getFriends(): Promise<FindMyFriendLocation[]> {
@@ -105,11 +103,8 @@ export class FindMyInterface {
             throw new Error("The Find My Devices helper is unavailable on this macOS version");
         }
 
+        this.requireFindMyHelperReady(targetProcessIdentifier);
         await FileSystem.execShellCommand("/usr/bin/open findmy://devices");
-        const helperAvailable = await this.waitForPrivateApiClient(targetProcessIdentifier);
-        if (!helperAvailable) {
-            throw new Error("The Find My Devices helper did not connect before the refresh timeout");
-        }
 
         const result = await Server().privateApi.findmy.refreshDevices();
         const refreshResponse = result?.data as FindMyDevicesRefreshResponse | undefined;
@@ -154,25 +149,26 @@ export class FindMyInterface {
         return Server().findMyDevicesCache.getAll();
     }
 
-    private static async waitForPrivateApiClient(processIdentifier: string): Promise<boolean> {
-        const maximumAttempts = Math.ceil(
-            FIND_MY_DEVICES_HELPER_CONNECTION_TIMEOUT_MS / FIND_MY_DEVICES_HELPER_CONNECTION_POLL_MS
-        );
-        for (let attempt = 0; attempt < maximumAttempts; attempt += 1) {
-            if (Server().privateApi.hasClient(processIdentifier)) {
-                return true;
-            }
-            await waitMs(FIND_MY_DEVICES_HELPER_CONNECTION_POLL_MS);
+    private static requireFindMyHelperReady(processIdentifier: string): void {
+        const api = Server().privateApi;
+        const readiness = api.findMyReadiness;
+        if (readiness.status !== "ready" || !api.hasClient(processIdentifier)) {
+            throw new FindMyUnavailableError(readiness.status === "ready" ? {
+                ...readiness,
+                status: "unavailable",
+                reason: "connection_lost",
+                message: "Find My helper is not connected. Retry to check its availability again."
+            } : readiness);
         }
-        return Server().privateApi.hasClient(processIdentifier);
     }
 
     static async refreshFriends(allowFindMyAppFallback = true, requireFreshResult = false): Promise<FindMyFriendLocation[]> {
         const privateApiEnabled = Boolean(Server().repo.getConfig("enable_private_api"));
         const privateApiTarget = resolveFindMyFriendsPrivateApiTarget({ isMinBigSur, isMinSonoma, isMinSequoia });
-        let privateApiHelperAvailable = privateApiTarget != null && Server().privateApi.hasClient(privateApiTarget);
-        if (requireFreshResult && isMinSequoia && privateApiEnabled && privateApiTarget && !privateApiHelperAvailable) {
-            privateApiHelperAvailable = await this.waitForPrivateApiClient(privateApiTarget);
+        const privateApiHelperAvailable = privateApiTarget != null && Server().privateApi.hasClient(privateApiTarget);
+        if (isMinSequoia && (Server().privateApi.findMyReadiness.status !== "ready" || !privateApiHelperAvailable)) {
+            if (requireFreshResult && privateApiTarget) this.requireFindMyHelperReady(privateApiTarget);
+            return this.getFriends();
         }
         let receivedUsableHelperResponse = false;
         if (privateApiEnabled && privateApiTarget != null && privateApiHelperAvailable) {

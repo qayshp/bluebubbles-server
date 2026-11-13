@@ -2,21 +2,29 @@ import { isMinSequoia } from "@server/env";
 import { Next } from "koa";
 import { RouterContext } from "koa-router";
 import { Success } from "../responses/success";
-import { ServerError } from "../responses/errors";
+import { ServerError, ServiceUnavailable } from "../responses/errors";
 import { FindMyInterface } from "@server/api/interfaces/findMyInterface";
 import { FindMyFriendLocation } from "@server/api/lib/findmy/types";
 import { NEW_FINDMY_LOCATION } from "@server/events";
 import { Server } from "@server";
+import { FindMyUnavailableError } from "@server/api/privateApi/FindMyHelperReadiness";
 
 export class FindMyRouter {
     static async status(ctx: RouterContext, _: Next) {
         return new Success(ctx, { message: "Find My helper status", data: {
+            ...Server().privateApi.findMyReadiness,
             privateApiEnabled: Boolean(Server().repo.getConfig("enable_private_api")),
             helperRequired: isMinSequoia,
-            helperConnected: Server().privateApi.hasClient("com.apple.findmy"),
+            helperConnected: Server().privateApi.findMyReadiness.status === "ready" &&
+                Server().privateApi.hasClient("com.apple.findmy"),
             cachedFriends: Server().findMyFriendsCache.getAll().length,
             cachedDevices: Server().findMyDevicesCache.getAll().length
         } }).send();
+    }
+
+    static async retry(ctx: RouterContext, _: Next) {
+        const readiness = await Server().privateApi.retryFindMy();
+        return new Success(ctx, { message: "Find My helper availability check requested", data: readiness }).send();
     }
 
     static async emitFriendLocationUpdates(friendLocations: FindMyFriendLocation[]) {
@@ -38,6 +46,9 @@ export class FindMyRouter {
                 data: locations
             }).send();
         } catch (ex: any) {
+            if (ex instanceof FindMyUnavailableError) {
+                throw new ServiceUnavailable({ error: ex.message, data: ex.readiness });
+            }
             throw new ServerError({
                 message: "Failed to refresh Find My device locations!",
                 error: ex?.message ?? ex.toString()
@@ -54,6 +65,9 @@ export class FindMyRouter {
                 data: friendLocations
             }).send();
         } catch (ex: any) {
+            if (ex instanceof FindMyUnavailableError) {
+                throw new ServiceUnavailable({ error: ex.message, data: ex.readiness });
+            }
             throw new ServerError({
                 message: "Failed to refresh Find My friends locations!",
                 error: ex?.message ?? ex.toString()

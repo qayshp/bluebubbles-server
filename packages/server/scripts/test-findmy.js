@@ -31,7 +31,8 @@ const { normalizeFindMyDevice, normalizeFindMyDevices, normalizeFindMyFriendLoca
 const { JsonLineBuffer } = loadTypeScriptModule("../src/server/api/privateApi/JsonLineBuffer.ts");
 const { selectPrivateApiClients } = loadTypeScriptModule("../src/server/api/privateApi/PrivateApiClientSelector.ts");
 const findMyPrivateApiSupport = loadTypeScriptModule("../src/server/api/lib/findmy/privateApiSupport.ts");
-const { isSipExplicitlyDisabled, isLibraryValidationDisabled } = loadTypeScriptModule("../src/server/api/privateApi/requirements.ts");
+const findMyHelperReadiness = loadTypeScriptModule("../src/server/api/privateApi/FindMyHelperReadiness.ts");
+const { isSipExplicitlyDisabled } = loadTypeScriptModule("../src/server/api/privateApi/requirements.ts");
 assert.equal(isSipExplicitlyDisabled("System Integrity Protection status: disabled.\n"), true);
 assert.equal(isSipExplicitlyDisabled("System Integrity Protection status: enabled.\n"), false);
 assert.equal(isSipExplicitlyDisabled(`System Integrity Protection status: unknown (Custom Configuration).
@@ -43,10 +44,6 @@ assert.equal(isSipExplicitlyDisabled(`System Integrity Protection status: unknow
 "a partial SIP configuration must not be reported as fully disabled");
 for (const status of ["", null, "csrutil: failed to query configuration"]) {
     assert.equal(isSipExplicitlyDisabled(status), false);
-}
-assert.equal(isLibraryValidationDisabled("1\n"), true);
-for (const status of ["0", "", null, "The domain/default pair does not exist", "11"]) {
-    assert.equal(isLibraryValidationDisabled(status), false);
 }
 const {
     FIND_MY_PROCESS_IDENTIFIER,
@@ -297,7 +294,8 @@ const loadFindMyInterface = environment => {
             hideFindMyFriends: () => ""
         },
         "@server/api/lib/findmy/utils": findMyUtilities,
-        "@server/api/lib/findmy/privateApiSupport": findMyPrivateApiSupport
+        "@server/api/lib/findmy/privateApiSupport": findMyPrivateApiSupport,
+        "@server/api/privateApi/FindMyHelperReadiness": findMyHelperReadiness
     }).FindMyInterface;
 };
 
@@ -324,6 +322,11 @@ const createRefreshScenario = ({
             getConfig: name => name === "enable_private_api"
         },
         privateApi: {
+            findMyReadiness: {
+                required: true, requested: true, status: helperAvailable ? "ready" : "unavailable",
+                reason: helperAvailable ? null : "registration_timeout",
+                message: helperAvailable ? "Find My helper is connected." : "Find My helper is not connected. Check system settings and retry."
+            },
             hasClient: processIdentifier => {
                 observations.privateApiTargets.push(processIdentifier);
                 assert.equal(processIdentifier, expectedPrivateApiTarget);
@@ -390,6 +393,11 @@ const createDeviceRefreshScenario = ({
             }
         },
         privateApi: {
+            findMyReadiness: {
+                required: true, requested: true, status: helperAvailable ? "ready" : "unavailable",
+                reason: helperAvailable ? null : "registration_timeout",
+                message: helperAvailable ? "Find My helper is connected." : "Find My helper is not connected. Check system settings and retry."
+            },
             hasClient: processIdentifier => {
                 observations.privateApiTargets.push(processIdentifier);
                 assert.equal(processIdentifier, FIND_MY_PROCESS_IDENTIFIER);
@@ -441,6 +449,8 @@ const runFindMyDylibPluginTests = async () => {
     for (const scenario of scenarios) {
         const refreshes = [];
         activeServer = {
+            repo: { getConfig: () => true },
+            privateApi: { hasClient: () => true },
             findMyFriendsCache: {
                 getAll: () => Array.from({ length: scenario.cachedFriends }, () => ({}))
             },
@@ -467,11 +477,13 @@ const runFindMyDylibPluginTests = async () => {
                         refreshFriends: async () => refreshes.push("friends"),
                         refreshDevices: async () => refreshes.push("devices")
                     }
-                }
+                },
+                "@server/api/privateApi/FindMyHelperReadiness": findMyHelperReadiness
             }
         );
 
         const plugin = new FindMyDylibPlugin("Find My Helper");
+        plugin.acceptRegistration = true;
         await plugin.afterClientRegistration();
         assert.deepEqual(refreshes, scenario.expectedRefreshes);
     }
@@ -484,7 +496,7 @@ const runRefreshBranchTests = async () => {
     let locations = await FindMyInterface.refreshFriends();
     await settleBackgroundFallback();
     assert.equal(observations.helperCalls, 0);
-    assert.equal(observations.fallbackCalls, 1);
+    assert.equal(observations.fallbackCalls, 0, "unavailable modern helper must preserve cache without reactivating Find My");
     assert.equal(locations.length, 1);
 
     observations = createRefreshScenario({
@@ -708,7 +720,18 @@ const runDeviceRefreshTests = async () => {
         helperAvailable: false,
         helperResponse: { data: { devices: [], partial: false, skippedDevices: 0 } }
     });
-    await assert.rejects(() => FindMyInterface.refreshDevices(), /did not connect/);
+    await assert.rejects(() => FindMyInterface.refreshDevices(), /helper is not connected/);
+    assert.deepEqual(openedFindMyCommands, [], "a blocked helper must fail before opening the Devices URI");
+
+    observations = createDeviceRefreshScenario({ helperAvailable: true, initialDevices: [normalizedOfflineDevice] });
+    activeServer.privateApi.findMyReadiness = {
+        required: true, requested: true, status: "unavailable", reason: "registration_timeout",
+        message: "Find My helper registration timed out. Retry the availability check."
+    };
+    await assert.rejects(() => FindMyInterface.refreshDevices(), /registration timed out/);
+    assert.deepEqual(openedFindMyCommands, [], "an expired attempt remains blocked even if a late socket is registered");
+    assert.equal(observations.helperCalls, 0);
+    assert.deepEqual(await FindMyInterface.getDevices(), [normalizedOfflineDevice], "cached GET stays available when the capability is blocked");
 
     createDeviceRefreshScenario({
         privateApiEnabled: false,

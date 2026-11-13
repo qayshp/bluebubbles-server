@@ -38,7 +38,7 @@ import { runTerminalScript, openSystemPreferences, startMessages } from "@server
 
 import { ActionHandler } from "./api/apple/actions";
 import { insertChatParticipants, isEmpty, isNotEmpty, waitMs } from "./helpers/utils";
-import { isMinBigSur, isMinCatalina, isMinHighSierra, isMinMojave, isMinMonterey, isMinSequoia } from "./env";
+import { isMinBigSur, isMinCatalina, isMinHighSierra, isMinMojave, isMinMonterey } from "./env";
 import { Proxy } from "./services/proxyServices/proxy";
 import { PrivateApiService } from "./api/privateApi/PrivateApiService";
 import { OutgoingMessageManager } from "./managers/outgoingMessageManager";
@@ -1081,6 +1081,8 @@ class BlueBubblesServer extends EventEmitter {
         } else if (prevConfig.private_api_mode !== nextConfig.private_api_mode) {
             this.logger.debug("Detected Private API Mode change");
             await Server().privateApi.restart();
+        } else if (prevConfig.open_findmy_on_startup !== nextConfig.open_findmy_on_startup) {
+            await this.privateApi.updateFindMyPreference();
         }
 
         // If the dock style changes
@@ -1248,23 +1250,15 @@ class BlueBubblesServer extends EventEmitter {
 
     async checkPrivateApiRequirements(): Promise<Array<NodeJS.Dict<any>>> {
         const output = [];
+        const sipDisabled = await FileSystem.isSipDisabled();
         output.push({
-            name: "SIP Disabled",
-            pass: await FileSystem.isSipDisabled(),
+            name: "SIP configuration",
+            pass: sipDisabled,
+            diagnostic: true,
+            detail: sipDisabled ? "Fully disabled" : "Enabled or custom",
             solution:
-                `Follow our documentation on how to disable SIP: ` +
-                `https://docs.bluebubbles.app/private-api/installation`
+                "SIP status alone does not establish helper availability. Each helper connection is checked separately."
         });
-
-        if (isMinSequoia && this.repo.getConfig("open_findmy_on_startup")) {
-            output.push({
-                name: "Find My Library Validation Setting",
-                pass: await FileSystem.isLibraryValidationDisabled(),
-                solution:
-                    "Find My helper injection requires the Library Validation step in the Private API setup guide. " +
-                    "This is a system-wide setting: https://docs.bluebubbles.app/private-api/installation"
-            });
-        }
 
         return output;
     }

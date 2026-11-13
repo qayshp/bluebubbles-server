@@ -225,9 +225,9 @@ export class ProcessSpawner extends Loggable {
         }
     }
 
-    async kill() {
+    async kill(signal: NodeJS.Signals = "SIGTERM") {
         if (this.process) {
-            this.process.kill();
+            this.process.kill(signal);
         }
     }
 
