@@ -18,9 +18,24 @@ Messages helper when that private API is available.
 
 On macOS 15 or later, the Devices GET route reads the server's latest helper
 snapshot without changing the Find My view. The explicit Devices refresh route
-opens `findmy://devices`, waits for the dedicated helper, and reads the
-app-owned FMIP device collection. It does not use Accessibility clicks,
-keyboard events, visible-cell scraping, or fixed view-loading delays.
+requires the dedicated helper to be ready before opening `findmy://devices`
+and reading the app-owned FMIP device collection. It does not use Accessibility
+clicks, keyboard events, visible-cell scraping, or fixed view-loading delays.
+
+The dedicated Friends helper returns `locations`, boolean `partial` and
+`friendListTimedOut` fields, a `timedOutHandles` string array, and a nonnegative
+integer `skippedFriends` count. A complete snapshot (`partial: false`) must
+report no timeouts or skipped friends. A partial snapshot may conservatively
+retain previously cached friends even when no individual timeout is listed.
+The Server validates completion metadata, identifiable records, and duplicate
+handles before changing the cache. A valid complete empty snapshot clears it;
+valid partial snapshots merge without replacing newer cached locations. Older
+Messages helpers retain support for responses without completion metadata.
+
+Friends and Devices GET routes retain their cache while the required helper
+is unavailable. Refresh routes return HTTP 503 for unavailable readiness;
+malformed fresh responses fail and retain the cache. Empty Friends and Devices
+caches initialize independently after an accepted helper registration.
 
 The artifact checksum must match its `.md5` file, it must contain `x86_64` and
 `arm64` slices, and it must use `@rpath/BlueBubblesFindMyHelper.dylib` as its

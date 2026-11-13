@@ -88,16 +88,6 @@ export class FindMyInterface {
     }
 
     private static async refreshDevicesThroughPrivateApi(): Promise<FindMyDevice[]> {
-        const privateApiEnabled = Boolean(Server().repo.getConfig("enable_private_api"));
-        if (!privateApiEnabled) {
-            throw new Error("Find My Devices on macOS 15 or later requires the Private API");
-        }
-
-        const openFindMyOnStartup = Boolean(Server().repo.getConfig("open_findmy_on_startup"));
-        if (!openFindMyOnStartup) {
-            throw new Error("Find My Devices requires Open FindMy App on Startup to be enabled");
-        }
-
         const targetProcessIdentifier = resolveFindMyDevicesPrivateApiTarget({ isMinSequoia });
         if (targetProcessIdentifier == null) {
             throw new Error("The Find My Devices helper is unavailable on this macOS version");
@@ -162,7 +152,10 @@ export class FindMyInterface {
         }
     }
 
-    static async refreshFriends(allowFindMyAppFallback = true, requireFreshResult = false): Promise<FindMyFriendLocation[]> {
+    static async refreshFriends(
+        allowFindMyAppFallback = true,
+        requireFreshResult = false
+    ): Promise<FindMyFriendLocation[]> {
         const privateApiEnabled = Boolean(Server().repo.getConfig("enable_private_api"));
         const privateApiTarget = resolveFindMyFriendsPrivateApiTarget({ isMinBigSur, isMinSonoma, isMinSequoia });
         const privateApiHelperAvailable = privateApiTarget != null && Server().privateApi.hasClient(privateApiTarget);
@@ -177,21 +170,45 @@ export class FindMyInterface {
                 const refreshResponse = result?.data as FindMyFriendsRefreshResponse | undefined;
                 if (Array.isArray(refreshResponse?.locations)) {
                     const refreshedLocations = normalizeFindMyFriendLocations(refreshResponse.locations);
-                    const responseContainsOnlyInvalidLocations =
-                        refreshResponse.locations.length > 0 && refreshedLocations.length === 0;
-                    const responseIsPartial = refreshResponse.partial === true;
-                    receivedUsableHelperResponse =
-                        !responseContainsOnlyInvalidLocations && (!responseIsPartial || refreshedLocations.length > 0);
-
-                    if (!responseContainsOnlyInvalidLocations) {
-                        if (responseIsPartial) {
-                            Server().findMyFriendsCache.updateAll(refreshedLocations);
-                        } else {
-                            Server().findMyFriendsCache.replaceAll(refreshedLocations);
-                        }
-                    } else {
-                        Server().logger.warn("Find My Friends helper returned no identifiable locations.");
+                    if (refreshedLocations.length !== refreshResponse.locations.length) {
+                        throw new Error("The Find My Friends helper returned invalid location records");
                     }
+                    const handles = refreshedLocations.map(location => location.handle);
+                    if (new Set(handles).size !== handles.length) {
+                        throw new Error("The Find My Friends helper returned duplicate friend handles");
+                    }
+
+                    // The dedicated helper reports whether its snapshot is complete.
+                    // Earlier Messages helpers do not supply this metadata.
+                    if (isMinSequoia) {
+                        if (
+                            typeof refreshResponse.partial !== "boolean" ||
+                            typeof refreshResponse.friendListTimedOut !== "boolean" ||
+                            !Array.isArray(refreshResponse.timedOutHandles) ||
+                            !refreshResponse.timedOutHandles.every(
+                                handle => typeof handle === "string" && handle.trim().length > 0
+                            ) ||
+                            !Number.isInteger(refreshResponse.skippedFriends) ||
+                            refreshResponse.skippedFriends < 0
+                        ) {
+                            throw new Error("The Find My Friends helper returned invalid completion metadata");
+                        }
+                        if (
+                            !refreshResponse.partial &&
+                            (refreshResponse.friendListTimedOut ||
+                                refreshResponse.timedOutHandles.length > 0 ||
+                                refreshResponse.skippedFriends > 0)
+                        ) {
+                            throw new Error("The Find My Friends helper returned an inconsistent completion state");
+                        }
+                    }
+                    const responseIsPartial = refreshResponse.partial === true;
+                    if (responseIsPartial) {
+                        Server().findMyFriendsCache.updateAll(refreshedLocations);
+                    } else {
+                        Server().findMyFriendsCache.replaceAll(refreshedLocations);
+                    }
+                    receivedUsableHelperResponse = !responseIsPartial || refreshedLocations.length > 0;
 
                     if (responseIsPartial) {
                         const timedOutFriendCount = Array.isArray(refreshResponse.timedOutHandles)
@@ -212,9 +229,7 @@ export class FindMyInterface {
         }
 
         if (requireFreshResult && isMinSequoia && !receivedUsableHelperResponse) {
-            throw new Error(privateApiHelperAvailable
-                ? "Find My Friends helper did not return a usable fresh response; cached data was retained"
-                : "Find My Friends helper is not connected. The injected library must load in Find My before refresh can succeed");
+            throw new Error("Find My Friends helper did not return a usable fresh response; cached data was retained");
         }
 
         const shouldRefreshUsingFindMyApp = allowFindMyAppFallback && (!receivedUsableHelperResponse || !isMinSequoia);
