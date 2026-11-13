@@ -49,6 +49,10 @@ Automation permission requests for Find My and System Events happen only when
 the Find My integration is started or its Accessibility fallback is explicitly
 used. Normal server startup does not prompt for unrelated Automation access.
 
+Friends HTTP and socket payloads serialize `is_locating_in_progress` as a JSON
+boolean, matching the released clients. Native helper `0`/`1` flags are
+normalized at the Server boundary.
+
 ## Find My release smoke test
 
 TCC Automation grants are tied to the signed application identity. Before a
