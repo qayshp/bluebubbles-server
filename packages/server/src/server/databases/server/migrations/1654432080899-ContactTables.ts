@@ -41,6 +41,16 @@ export class ContactTables1654432080899 implements MigrationInterface {
         await queryRunner.query(this.createContactTable);
         await queryRunner.query(this.createContactAddressTable);
 
+        // A synchronized database can already contain these columns before its migrations are recorded.
+        const hasExternalId = await queryRunner.hasColumn("contact", "external_id");
+        const hasContactId = await queryRunner.hasColumn("contact_address", "contactId");
+        const contactColumns = this.contactColumnOrder + (hasExternalId ? ', "external_id"' : "");
+        const addressColumns = this.contactAddressColumnOrder + (hasContactId ? ', "contactId"' : "");
+        // Keep existing links only when the referenced contact survives the copy.
+        const addressSourceColumns = this.contactAddressColumnOrder + (
+            hasContactId ? ', (SELECT "id" FROM "contact" WHERE "id" = "contact_address_old"."contactId")' : ""
+        );
+
         // Now we need to make sure that all other versions also have a display_name unique constraint.
         // Since sqlite doesn't support updating a table's unique constraints, we have to do some magic.
         Server().log(`Migration[${this.name}] Migrating Contact table constraints...`, 'debug');
@@ -63,14 +73,15 @@ export class ContactTables1654432080899 implements MigrationInterface {
         Server().log(`Migration[${this.name}]   -> Recreating Contact tables`, 'debug');
         await queryRunner.query(this.createContactTable);
         await queryRunner.query(this.createContactAddressTable);
+        if (hasExternalId) await queryRunner.query(`ALTER TABLE "contact" ADD COLUMN "external_id" text;`);
 
         // 4: Insert all the data back into the original table with the updated contstraints
         Server().log(`Migration[${this.name}]   -> Transfering data to new tables`, 'debug');
         await queryRunner.query(
-            `INSERT INTO "contact" (${this.contactColumnOrder}) SELECT ${this.contactColumnOrder} FROM "contact_old";`);
+            `INSERT INTO "contact" (${contactColumns}) SELECT ${contactColumns} FROM "contact_old";`);
         await queryRunner.query(
-            `INSERT INTO "contact_address" (${this.contactAddressColumnOrder}) SELECT ${
-                this.contactAddressColumnOrder} FROM "contact_address_old";`);
+            `INSERT INTO "contact_address" (${addressColumns}) SELECT ${addressSourceColumns}
+                FROM "contact_address_old";`);
 
         // 5: Drop original, renamed table
         Server().log(`Migration[${this.name}]   -> Removing original (renamed) tables`, 'debug');
